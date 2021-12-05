@@ -2,14 +2,16 @@ use sqlx::{FromRow};
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+fn default_id() -> i32 { 0 }
+
+#[derive(Serialize, Deserialize)]
 pub struct FullCalendarPeriod {
     pub resource: i32,
     pub start: DateTime<Local>,
     pub end: DateTime<Local>,
 }
 
-#[derive(FromRow, Serialize)]
+#[derive(FromRow, Serialize, Deserialize)]
 pub struct FullCalendarEvent {
     pub id: i32,
     pub title: String,
@@ -33,6 +35,11 @@ pub struct ReservationOut {
     pub id: i32,
 }
 
+#[derive(FromRow, Serialize)]
+pub struct ID {
+    pub id: i32,
+}
+
 #[derive(Deserialize)]
 pub struct DeleteInfo {
     pub id: i32,
@@ -43,6 +50,13 @@ pub struct DeleteInfo {
 pub struct StoredPass {
     pub id: i32,
     pub passhash: String,
+}
+
+#[derive(FromRow, Serialize, Deserialize)]
+pub struct Resource {
+    #[serde(default = "default_id")]
+    pub id: i32,
+    pub resource_name: String,
 }
 
 #[derive(Serialize)]
