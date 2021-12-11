@@ -1,11 +1,11 @@
 use actix_web::{get, post, delete, web, HttpResponse, Responder};
 use crate::db_handler::{DataAccessor};
 use crate::utils;
-use crate::models::{Reservation, Request, MyError, MySuccess};
+use crate::models::{Reservation, Filter, MyError, MySuccess};
 
 #[get("/reservations/{id}")]
 async fn get_reservation(reservation_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
-  let result = accessor.get_reservation_by_id(reservation_id.into_inner()).await;
+  let result = accessor.get_reservation(reservation_id.into_inner()).await;
   match result {
     Err(e) => HttpResponse::NotFound().json(MyError{code: 4004, message: e.to_string()}),
     Ok(reservation) => HttpResponse::Ok().json(reservation),
@@ -13,9 +13,9 @@ async fn get_reservation(reservation_id: web::Path<i32>, accessor: web::Data<Dat
 }
 
 #[get("/reservations")]
-async fn get_reservations(accessor: web::Data<DataAccessor>) -> impl Responder {
-  println!("GET!");
-  let result = accessor.get_reservations().await;
+async fn get_reservations(filter: web::Query<Filter>, accessor: web::Data<DataAccessor>) -> impl Responder {
+  let filter = filter.into_inner();
+  let result = accessor.get_reservations(filter).await;
   match result {
     Err(e) => HttpResponse::NotFound().json(MyError{code: 4000, message: e.to_string()}),
     Ok(reservations) => HttpResponse::Ok().json(reservations),
@@ -25,8 +25,7 @@ async fn get_reservations(accessor: web::Data<DataAccessor>) -> impl Responder {
 #[post("/reservations")]
 async fn add_reservation(reservation: web::Json<Reservation>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let reservation = reservation.into_inner();
-  let passhash = utils::hash(&reservation.password);
-  let result = accessor.add_reservation(reservation, passhash).await;
+  let result = accessor.add_reservation(reservation).await;
   match result {
     Err(e) => HttpResponse::InternalServerError().json(MyError{code: 400, message: e.to_string()}),
     Ok(_) => HttpResponse::Ok().json(MySuccess{code: 2000, message: "Reservation has successfully added".to_string()}),

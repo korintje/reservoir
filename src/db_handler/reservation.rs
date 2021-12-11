@@ -1,4 +1,4 @@
-use crate::models::{Reservation, ReservationDB, Period, PassHash};
+use crate::models::{Reservation, ReservationDB, Filter, PassHash};
 use crate::db_handler::{DataAccessor};
 
 /*
@@ -9,7 +9,7 @@ WHERE (reservation_id=$1) AND ((start BETWEEN $2 AND $3) OR (end BETWEEN $2 AND 
 
 impl DataAccessor {
 
-  pub async fn get_reservation_by_id(&self, reservation_id: i32) -> Result<Reservation, sqlx::Error> {
+  pub async fn get_reservation(&self, reservation_id: i32) -> Result<Reservation, sqlx::Error> {
     sqlx::query_as(
       "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id) 
@@ -21,11 +21,22 @@ impl DataAccessor {
     .map(|obj: ReservationDB| Reservation::from_db(obj))
   }
 
-  pub async fn get_reservations(&self) -> Result<Vec<Reservation>, sqlx::Error> {
-    sqlx::query_as(
+  pub async fn get_reservations(&self, filter: Filter) -> Result<Vec<Reservation>, sqlx::Error> {
+    let mut query = 
       "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash 
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id)"
-    )
+      .to_string();
+    let mut options = Vec::new();
+    if let Some(dt) = filter.from { options.push(format!("end>{}", dt.timestamp())); }
+    if let Some(dt) = filter.until { options.push(format!("start<={}", dt.timestamp())); }
+    if let Some(id) = filter.user_id { options.push(format!("user_id={}", id)); }
+    if let Some(id) = filter.resource_id { options.push(format!("resource_id={}", id)); }
+    if !options.is_empty() {
+      query += " WHERE ";
+      query += &options.join(" AND ");
+    }
+    println!("{}", query);
+    sqlx::query_as(&query)
     .fetch_all(&*self.pool_ref)
     .await
     .map(|v| {
@@ -35,27 +46,9 @@ impl DataAccessor {
     })
   }
 
-  pub async fn get_reservations_by_period(&self, resource_id: i32, period: Period) -> Result<Vec<Reservation>, sqlx::Error> {
-    sqlx::query_as(
-      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description
-      FROM reservations JOIN users ON reservations.user_id=users.id JOIN resources ON (reservations.resource_id=resources.id) 
-      WHERE (resource_id=$1) AND ((start BETWEEN $2 AND $3) OR (end BETWEEN $2 AND $3))"
-    )
-    .bind(resource_id)
-    .bind(&period.from)
-    .bind(&period.until)
-    .fetch_all(&*self.pool_ref)
-    .await
-    .map(|v| {
-      v.into_iter().map(|obj: ReservationDB| {
-        Reservation::from_db(obj)
-      }).collect()
-    })
-  }
-
-  pub async fn add_reservation(&self, reservation: Reservation, passhash: String) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn add_reservation(&self, reservation: Reservation) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
     println!("Here!");
-    let reservation_db = ReservationDB::from_web(reservation);
+    let reservation_db = ReservationDB::from_reservation(reservation);
     sqlx::query(
       "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash) 
       VALUES ($1, $2, $3, $4, $5, $6)"
@@ -65,7 +58,7 @@ impl DataAccessor {
     .bind(reservation_db.start)
     .bind(reservation_db.end)
     .bind(reservation_db.description)
-    .bind(passhash)
+    .bind(reservation_db.passhash)
     .execute(&*self.pool_ref)
     .await
   }
@@ -89,8 +82,28 @@ impl DataAccessor {
   }
 
 }
-  /*
 
+/*
+  pub async fn get_reservations_by_period(&self, resource_id: i32, period: Period) -> Result<Vec<Reservation>, sqlx::Error> {
+    sqlx::query_as(
+      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description
+      FROM reservations JOIN users ON reservations.user_id=users.id JOIN resources ON (reservations.resource_id=resources.id) 
+      WHERE (resource_id=$1) AND ((start BETWEEN $2 AND $3) OR (end BETWEEN $2 AND $3))"
+    )
+    .bind(resource_id)
+    .bind(&period.from)
+    .bind(&period.until)
+    .fetch_all(&*self.pool_ref)
+    .await
+    .map(|v| {
+      v.into_iter().map(|obj: ReservationDB| {
+        Reservation::from_db(obj)
+      }).collect()
+    })
+  }
+*/
+
+/*
 #[get("/fullcalendar_events")]
 async fn get_fullcalendar_events(period: web::Query<FullCalendarPeriod>) -> HttpResponse {
     /*Specialized getter method for JS Fullcalendar library*/

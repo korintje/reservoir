@@ -1,8 +1,10 @@
 use sqlx::{FromRow};
-use chrono::{DateTime, Local, Utc, TimeZone};
+use chrono::{DateTime, Local, TimeZone};
 use serde::{Deserialize, Serialize};
+use crate::utils;
 
 fn default_id() -> i32 { 0 }
+fn default_param<T>() -> Option<T> { None }
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct User {
@@ -18,7 +20,7 @@ pub struct Resource {
     pub resource_name: String,
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Reservation {
     pub id: Option<i32>,
     pub resource_id: Option<i32>,
@@ -49,17 +51,7 @@ impl Reservation {
     }
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
-pub struct Request {
-    pub resource_id: i32,
-    pub user_id: i32,
-    pub start: DateTime<Local>,
-    pub end: DateTime<Local>,
-    pub description: String,
-    pub password: String,
-}
-
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize)]
 pub struct ReservationDB {
     pub id: Option<i32>,
     pub resource_id: Option<i32>,
@@ -73,7 +65,7 @@ pub struct ReservationDB {
 }
 
 impl ReservationDB {
-    pub fn from_web(reservation: Reservation) -> ReservationDB {
+    pub fn from_reservation(reservation: Reservation) -> ReservationDB {
         let start = reservation.start.map(|t| t.timestamp());
         let end = reservation.end.map(|t| t.timestamp());
         ReservationDB {
@@ -85,7 +77,7 @@ impl ReservationDB {
             start,
             end,
             description: reservation.description,
-            passhash: reservation.password,
+            passhash: Some(utils::hash(&reservation.password)),
         }
     }
 }
@@ -94,6 +86,14 @@ impl ReservationDB {
 pub struct Period {
     pub from: DateTime<Local>,
     pub until: DateTime<Local>,
+}
+
+#[derive(Deserialize)]
+pub struct Filter {
+    pub from: Option<DateTime<Local>>,
+    pub until: Option<DateTime<Local>>,
+    pub user_id: Option<i32>,
+    pub resource_id: Option<i32>,
 }
 
 #[derive(FromRow, Serialize, Deserialize)]
@@ -117,55 +117,3 @@ pub struct MySuccess {
     pub code: i32,
     pub message: String,
 }
-
-/////////////////////////////////////////////////
-
-/*
-#[derive(Serialize, Deserialize)]
-pub struct FullCalendarPeriod {
-    pub resource: i32,
-    pub start: DateTime<Local>,
-    pub end: DateTime<Local>,
-}
-
-#[derive(FromRow, Serialize, Deserialize)]
-pub struct FullCalendarEvent {
-    pub id: i32,
-    pub title: String,
-    pub start: DateTime<Local>,
-    pub end: DateTime<Local>,
-    pub description: String,
-}
-
-#[derive(FromRow, Serialize, Deserialize)]
-pub struct ReservationInfo {
-    pub resource_id: i32,
-    pub user_id: i32,
-    pub start_datetime: DateTime<Local>,
-    pub end_datetime: DateTime<Local>,
-    pub description: String,
-    pub password: String,
-}
-
-#[derive(FromRow, Serialize)]
-pub struct ReservationOut {
-    pub id: i32,
-}
-
-#[derive(FromRow, Serialize)]
-pub struct ID {
-    pub id: i32,
-}
-
-#[derive(Deserialize)]
-pub struct DeleteInfo {
-    pub id: i32,
-    pub password: String,
-}
-
-#[derive(FromRow)]
-pub struct StoredPass {
-    pub id: i32,
-    pub passhash: String,
-}
-*/
