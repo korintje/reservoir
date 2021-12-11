@@ -5,7 +5,7 @@ impl DataAccessor {
 
   pub async fn get_reservation(&self, reservation_id: i32) -> Result<Reservation, sqlx::Error> {
     sqlx::query_as(
-      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description
+      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id) 
       WHERE (reservations.id=$1)"
     )
