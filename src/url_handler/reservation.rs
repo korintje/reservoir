@@ -28,7 +28,7 @@ async fn add_reservation(reservation: web::Json<Reservation>, accessor: web::Dat
   let result = accessor.add_reservation(reservation).await;
   match result {
     Err(e) => HttpResponse::InternalServerError().json(MyError{code: 400, message: e.to_string()}),
-    Ok(_) => HttpResponse::Ok().json(MySuccess{code: 2000, message: "Reservation has successfully added".to_string()}),
+    Ok(_) => HttpResponse::Ok().json(MySuccess{code: 2000, message: "Reservation has been successfully added".to_string()}),
   }
 }
 
@@ -37,20 +37,16 @@ async fn delete_reservation(reservation_id: web::Path<i32>, reservation: web::Js
   let id = reservation_id.into_inner();
   let posted_passhash = utils::hash(&reservation.password);
   let get_result = accessor.get_passhash_by_id(id).await;
-  match get_result {
-    Err(e) => HttpResponse::NotFound().json(MyError{code: 4000, message: e.to_string()}),
-    Ok(ph) => {
-      let stored_passhash = utils::hash(&ph.passhash);
-      if stored_passhash == posted_passhash {
-        let del_result = accessor.delete_reservation(id).await;
-        match del_result {
-          Err(e) => HttpResponse::Unauthorized().json(MyError{code: 4003, message: e.to_string()}),
-          Ok(_) => HttpResponse::Ok().json(MySuccess{code: 2000, message: format!("Reservation {} has successfully added", id)})
-        }
-      }else{
-        HttpResponse::Unauthorized().json(MyError{code: 4003, message: "Invalid password".to_string()})
-      }
+  if let Err(e) = get_result { return HttpResponse::NotFound().json(MyError{code: 4004, message: e.to_string()}) }
+  if let Some(stored_passhash) = get_result.unwrap().passhash {
+    if stored_passhash != posted_passhash {
+      return HttpResponse::Unauthorized().json(MyError{code: 4003, message: "Invalid password".to_string()})
     }
+  }
+  let del_result = accessor.delete_reservation(id).await;
+  match del_result {
+    Err(e) => HttpResponse::InternalServerError().json(MyError{code: 4000, message: e.to_string()}),
+    Ok(_) => HttpResponse::Ok().json(MySuccess{code: 2000, message: format!("Reservation {} has been successfully removed", id)})
   }
 }
 

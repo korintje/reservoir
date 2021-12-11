@@ -7,47 +7,47 @@ fn default_id() -> i32 { 0 }
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct User {
-    #[serde(default = "default_id")]
-    pub id: i32,
-    pub user_name: String,
+  #[serde(default = "default_id")]
+  pub id: i32,
+  pub user_name: String,
 }
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Resource {
-    #[serde(default = "default_id")]
-    pub id: i32,
-    pub resource_name: String,
+  #[serde(default = "default_id")]
+  pub id: i32,
+  pub resource_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Reservation {
-    pub id: Option<i32>,
-    pub resource_id: Option<i32>,
-    pub resource_name: Option<String>,
-    pub user_id: Option<i32>,
-    pub user_name: Option<String>,
-    pub start: Option<DateTime<Local>>,
-    pub end: Option<DateTime<Local>>,
-    pub description: Option<String>,
-    pub password: Option<String>,
+  pub id: Option<i32>,
+  pub resource_id: Option<i32>,
+  pub resource_name: Option<String>,
+  pub user_id: Option<i32>,
+  pub user_name: Option<String>,
+  pub start: Option<DateTime<Local>>,
+  pub end: Option<DateTime<Local>>,
+  pub description: Option<String>,
+  pub password: Option<String>,
 }
 
 impl Reservation {
-    pub fn from_db(db: ReservationDB) -> Reservation {
-        let start = db.start.map(|t| Local.timestamp(t, 0));
-        let end = db.end.map(|t| Local.timestamp(t, 0));
-        Reservation{
-            id: db.id, 
-            resource_id: db.resource_id,
-            resource_name: db.resource_name,
-            user_id: db.user_id,
-            user_name: db.user_name,
-            start,
-            end,
-            description: db.description,
-            password: db.passhash,
-        }
+  pub fn from_db(db: ReservationDB) -> Reservation {
+    let start = db.start.map(|t| Local.timestamp(t, 0));
+    let end = db.end.map(|t| Local.timestamp(t, 0));
+    Reservation{
+      id: db.id, 
+      resource_id: db.resource_id,
+      resource_name: db.resource_name,
+      user_id: db.user_id,
+      user_name: db.user_name,
+      start,
+      end,
+      description: db.description,
+      password: None,
     }
+  }
 }
 
 #[derive(FromRow, Serialize)]
