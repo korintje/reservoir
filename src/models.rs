@@ -1,5 +1,5 @@
 use sqlx::{FromRow};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc, TimeZone};
 use serde::{Deserialize, Serialize};
 
 fn default_id() -> i32 { 0 }
@@ -18,32 +18,77 @@ pub struct Resource {
     pub resource_name: String,
 }
 
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct Reservation {
     pub id: Option<i32>,
     pub resource_id: Option<i32>,
     pub resource_name: Option<String>,
     pub user_id: Option<i32>,
     pub user_name: Option<String>,
-    pub start_datetime: Option<DateTime<Local>>,
-    pub end_datetime: Option<DateTime<Local>>,
+    pub start: Option<DateTime<Local>>,
+    pub end: Option<DateTime<Local>>,
     pub description: Option<String>,
     pub password: Option<String>,
 }
 
-/*
-#[derive(Deserialize)]
-pub struct ReservationRequest {
-    #[serde(default = "default_id")]
-    pub id: i32,
+impl Reservation {
+    pub fn from_db(db: ReservationDB) -> Reservation {
+        let start = db.start.map(|t| Local.timestamp(t, 0));
+        let end = db.end.map(|t| Local.timestamp(t, 0));
+        Reservation{
+            id: db.id, 
+            resource_id: db.resource_id,
+            resource_name: db.resource_name,
+            user_id: db.user_id,
+            user_name: db.user_name,
+            start,
+            end,
+            description: db.description,
+            password: db.passhash,
+        }
+    }
+}
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct Request {
     pub resource_id: i32,
     pub user_id: i32,
-    pub start_datetime: DateTime<Local>,
-    pub end_datetime: DateTime<Local>,
+    pub start: DateTime<Local>,
+    pub end: DateTime<Local>,
     pub description: String,
     pub password: String,
 }
-*/
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct ReservationDB {
+    pub id: Option<i32>,
+    pub resource_id: Option<i32>,
+    pub resource_name: Option<String>,
+    pub user_id: Option<i32>,
+    pub user_name: Option<String>,
+    pub start: Option<i64>,
+    pub end: Option<i64>,
+    pub description: Option<String>,
+    pub passhash: Option<String>,
+}
+
+impl ReservationDB {
+    pub fn from_web(reservation: Reservation) -> ReservationDB {
+        let start = reservation.start.map(|t| t.timestamp());
+        let end = reservation.end.map(|t| t.timestamp());
+        ReservationDB {
+            id: reservation.id,
+            resource_id: reservation.resource_id,
+            resource_name: reservation.resource_name,
+            user_id: reservation.user_id,
+            user_name: reservation.user_name,
+            start,
+            end,
+            description: reservation.description,
+            passhash: reservation.password,
+        }
+    }
+}
 
 #[derive(Deserialize)]
 pub struct Period {
@@ -61,15 +106,21 @@ pub struct TableCount {
     pub count: i32,
 }
 
-
 #[derive(Serialize)]
 pub struct MyError {
     pub code: i32,
     pub message: String,
 }
 
+#[derive(Serialize)]
+pub struct MySuccess {
+    pub code: i32,
+    pub message: String,
+}
+
 /////////////////////////////////////////////////
 
+/*
 #[derive(Serialize, Deserialize)]
 pub struct FullCalendarPeriod {
     pub resource: i32,
@@ -117,3 +168,4 @@ pub struct StoredPass {
     pub id: i32,
     pub passhash: String,
 }
+*/

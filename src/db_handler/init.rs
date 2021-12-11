@@ -4,13 +4,13 @@ use crate::db_handler::{DataAccessor};
 impl DataAccessor {
 
   pub async fn init_table(&self) {
-    if self.is_table_exist("reservations").await {
+    if !self.is_table_exist("reservations").await {
       self.create_reservations_table().await.unwrap();
     }
-    if self.is_table_exist("resources").await {
+    if !self.is_table_exist("resources").await {
       self.create_resources_table().await.unwrap();
     }
-    if self.is_table_exist("users").await {
+    if !self.is_table_exist("users").await {
       self.create_users_table().await.unwrap();
     }
   }
