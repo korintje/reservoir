@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use crate::utils;
 
 fn default_id() -> i32 { 0 }
-fn default_param<T>() -> Option<T> { None }
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct User {
