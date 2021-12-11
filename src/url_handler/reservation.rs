@@ -1,7 +1,7 @@
 use actix_web::{get, post, delete, web, HttpResponse, Responder};
 use crate::db_handler::{DataAccessor};
 use crate::utils;
-use crate::models::{Reservation, Filter, MyError, MySuccess};
+use crate::models::{Reservation, Filter, MyError, MySuccess, FullCalendarFilter, FullCalendarEvent};
 
 #[get("/reservations/{id}")]
 async fn get_reservation(reservation_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
@@ -54,26 +54,16 @@ async fn delete_reservation(reservation_id: web::Path<i32>, reservation: web::Js
   }
 }
 
-/*
 #[get("/fullcalendar_events")]
-async fn get_fullcalendar_events(period: web::Query<FullCalendarPeriod>) -> HttpResponse {
-    /*Specialized getter method for JS Fullcalendar library*/
-    let psql_url: &str = &utils::get_psql_url();
-    let pool  = match utils::get_pool(psql_url).await {
-        Ok(p) => p,
-        Err(e) => return utils::internal_server_error(4001, &e.to_string()),
-    };
-    let events: Vec<FullCalendarEvent> = match sqlx::query_as(
-        "SELECT reservations.id AS id, user_name AS title, start_datetime AS start, end_datetime AS end, description 
-         FROM reservations JOIN users ON reservations.user_id=users.id
-         WHERE (resource_id=$1) AND ((start_datetime BETWEEN $2 AND $3) OR (end_datetime BETWEEN $2 AND $3))")
-        .bind(&period.resource)
-        .bind(&period.start)
-        .bind(&period.end)
-        .fetch_all(&pool).await {
-            Ok(item) => item,
-            Err(e) => return utils::internal_server_error(4002, &e.to_string()),
-        };
-    HttpResponse::Ok().json(events)
+async fn get_fullcalendar_events(filter: web::Query<FullCalendarFilter>, accessor: web::Data<DataAccessor>) -> HttpResponse {
+  let filter = filter.into_inner();
+  let filter = Filter{from: filter.start, until: filter.end, resource_id: filter.resource_id, user_id: None};
+  let result = accessor.get_reservations(filter).await;
+  match result {
+    Err(e) => HttpResponse::NotFound().json(MyError{code: 4000, message: e.to_string()}),
+    Ok(reservations) => {
+      let events: Vec<FullCalendarEvent> = reservations.into_iter().map(|rsv| FullCalendarEvent::from_reservation(rsv)).collect();
+      HttpResponse::Ok().json(events)
+    } 
+  }
 }
-*/

@@ -81,6 +81,30 @@ impl ReservationDB {
     }
 }
 
+#[derive(FromRow, Serialize, Deserialize)]
+pub struct FullCalendarFilter {
+    pub start: Option<DateTime<Local>>,
+    pub end: Option<DateTime<Local>>,
+    pub resource_id: Option<i32>,
+}
+
+#[derive(FromRow, Serialize, Deserialize)]
+pub struct FullCalendarEvent {
+    pub title: Option<String>,
+    pub start: Option<DateTime<Local>>,
+    pub end: Option<DateTime<Local>>,
+}
+
+impl FullCalendarEvent {
+    pub fn from_reservation(reservation: Reservation) -> FullCalendarEvent {
+        FullCalendarEvent {
+            title: reservation.user_name,
+            start: reservation.start,
+            end: reservation.end,
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Period {
     pub from: DateTime<Local>,

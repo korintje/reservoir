@@ -1,12 +1,6 @@
 use crate::models::{Reservation, ReservationDB, Filter, PassHash};
 use crate::db_handler::{DataAccessor};
 
-/*
-"SELECT reservations.id AS id, user_name AS title, start AS start, end AS end, description 
-FROM reservations JOIN users ON reservations.user_id=users.id
-WHERE (reservation_id=$1) AND ((start BETWEEN $2 AND $3) OR (end BETWEEN $2 AND $3))"
-*/
-
 impl DataAccessor {
 
   pub async fn get_reservation(&self, reservation_id: i32) -> Result<Reservation, sqlx::Error> {
