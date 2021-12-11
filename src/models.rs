@@ -93,6 +93,7 @@ pub struct FullCalendarEvent {
     pub title: Option<String>,
     pub start: Option<DateTime<Local>>,
     pub end: Option<DateTime<Local>>,
+    pub description: Option<String>,
 }
 
 impl FullCalendarEvent {
@@ -101,6 +102,7 @@ impl FullCalendarEvent {
             title: reservation.user_name,
             start: reservation.start,
             end: reservation.end,
+            description: reservation.description,
         }
     }
 }
