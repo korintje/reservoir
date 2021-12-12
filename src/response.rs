@@ -9,7 +9,7 @@ pub struct MyResponse {
 
 impl MyResponse {
 
-  pub fn Ok() -> HttpResponse {
+  pub fn ok() -> HttpResponse {
     HttpResponse::Ok().json(
       MyResponse{
         code: 2000, 
@@ -18,7 +18,7 @@ impl MyResponse {
     )
   }
 
-  pub fn BadRequest(e: &str) -> HttpResponse {
+  pub fn bad_request(e: &str) -> HttpResponse {
     HttpResponse::BadRequest().json(
       MyResponse{
         code: 4000, 
@@ -27,7 +27,7 @@ impl MyResponse {
     )
   }
 
-  pub fn Unauthorized(e: &str) -> HttpResponse {
+  pub fn unauthorized(e: &str) -> HttpResponse {
     HttpResponse::Unauthorized().json(
       MyResponse{
         code: 4001, 
@@ -36,7 +36,7 @@ impl MyResponse {
     )
   }
 
-  pub fn NotFound(e: &str) -> HttpResponse {
+  pub fn not_found(e: &str) -> HttpResponse {
     HttpResponse::NotFound().json(
       MyResponse{
         code: 4004, 
@@ -45,7 +45,7 @@ impl MyResponse {
     )
   }
 
-  pub fn InternalServerError(e: &str) -> HttpResponse {
+  pub fn internal_server_error(e: &str) -> HttpResponse {
     HttpResponse::InternalServerError().json(
       MyResponse{
         code: 5000, 
@@ -54,12 +54,12 @@ impl MyResponse {
     )
   }
 
-  pub fn ItemNotFound() -> HttpResponse {
-    MyResponse::NotFound("Item not found")
+  pub fn item_not_found() -> HttpResponse {
+    MyResponse::not_found("Item not found")
   }
 
-  pub fn IncorrectPassword() -> HttpResponse {
-    MyResponse::Unauthorized("Incorrect password")
+  pub fn incorrect_password() -> HttpResponse {
+    MyResponse::unauthorized("Incorrect password")
   }
 
 }

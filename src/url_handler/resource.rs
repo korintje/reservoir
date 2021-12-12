@@ -8,7 +8,7 @@ use response::{MyResponse};
 async fn get_resource(resource_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
     let result = accessor.get_resource(resource_id.into_inner()).await;
     match result {
-        Err(_) => MyResponse::ItemNotFound(),
+        Err(_) => MyResponse::item_not_found(),
         Ok(resource) => HttpResponse::Ok().json(resource),
     }
 }
@@ -17,7 +17,7 @@ async fn get_resource(resource_id: web::Path<i32>, accessor: web::Data<DataAcces
 async fn get_resources(accessor: web::Data<DataAccessor>) -> impl Responder {
     let result = accessor.get_resources().await;
     match result {
-        Err(_) => MyResponse::ItemNotFound(),
+        Err(_) => MyResponse::item_not_found(),
         Ok(resource) => HttpResponse::Ok().json(resource),
     }
 }
@@ -27,8 +27,8 @@ async fn add_resource(resource: web::Json<Resource>, accessor: web::Data<DataAcc
     let resource = resource.into_inner();
     let result = accessor.add_resource(resource).await;
     match result {
-        Err(e) => MyResponse::BadRequest(&e.to_string()),
-        Ok(_) => MyResponse::Ok(),
+        Err(e) => MyResponse::bad_request(&e.to_string()),
+        Ok(_) => MyResponse::ok(),
     }
 }
 
@@ -37,7 +37,7 @@ async fn delete_resource(resource_id: web::Path<i32>, accessor: web::Data<DataAc
     let resource_id = resource_id.into_inner();
     let result = accessor.delete_resource(resource_id).await;
     match result {
-        Err(_) => MyResponse::ItemNotFound(),
-        Ok(_) => MyResponse::Ok(),
+        Err(_) => MyResponse::item_not_found(),
+        Ok(_) => MyResponse::ok(),
     }
 }
