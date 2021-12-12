@@ -6,13 +6,6 @@ pub fn get_db_url() -> String {
   //    .expect("Failed to load setting")
 }
 
-/*
-pub fn internal_server_error(code: i32, message: &str) -> HttpResponse {
-  let error_json = MyError{code, message: message.to_string()};
-  HttpResponse::InternalServerError().json(error_json)
-}
-*/
-
 pub fn hash(input: &Option<String>) -> String {
   let mut hashed = Sha256::new();
   let string = match input {

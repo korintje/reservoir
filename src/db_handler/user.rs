@@ -1,4 +1,4 @@
-use crate::models::{User};
+use crate::model::{User};
 use crate::db_handler::{DataAccessor};
 
 impl DataAccessor {

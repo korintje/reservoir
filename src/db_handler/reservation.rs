@@ -1,4 +1,4 @@
-use crate::models::{Reservation, ReservationDB, Filter, PassHash};
+use crate::model::{Reservation, ReservationDB, Filter, PassHash};
 use crate::db_handler::{DataAccessor};
 
 impl DataAccessor {
@@ -12,7 +12,7 @@ impl DataAccessor {
     .bind(reservation_id)
     .fetch_one(&*self.pool_ref)
     .await
-    .map(|obj: ReservationDB| Reservation::from_db(obj))
+    .map(|obj: ReservationDB| Reservation::from(obj))
   }
 
   pub async fn get_reservations(&self, filter: Filter) -> Result<Vec<Reservation>, sqlx::Error> {
@@ -34,13 +34,13 @@ impl DataAccessor {
     .await
     .map(|v| {
       v.into_iter().map(|obj: ReservationDB| {
-        Reservation::from_db(obj)
+        Reservation::from(obj)
       }).collect()
     })
   }
 
   pub async fn add_reservation(&self, reservation: Reservation) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
-    let reservation_db = ReservationDB::from_reservation(reservation);
+    let reservation_db = ReservationDB::from(reservation);
     sqlx::query(
       "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash) 
       VALUES ($1, $2, $3, $4, $5, $6)"

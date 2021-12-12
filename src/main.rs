@@ -1,6 +1,7 @@
 use actix_web::{web, App, HttpServer};
-mod models;
+mod model;
 mod utils;
+mod response;
 mod url_handler;
 mod db_handler;
 

@@ -1,4 +1,4 @@
-use crate::models::{Resource};
+use crate::model::{Resource};
 use crate::db_handler::{DataAccessor};
 
 impl DataAccessor {

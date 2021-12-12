@@ -1,4 +1,4 @@
-use crate::models::{TableCount};
+use crate::model::{TableCount};
 use crate::db_handler::{DataAccessor};
 
 impl DataAccessor {
