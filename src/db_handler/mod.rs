@@ -1,3 +1,4 @@
+// use std::process::Command;
 use std::sync::Arc;
 use sqlx::sqlite::SqlitePoolOptions;
 
@@ -17,8 +18,8 @@ pub struct DataAccessor {
 
 impl DataAccessor { 
   
-  pub async fn new(psql_url: &str) -> DataAccessor {
-    let pool = SqlitePoolOptions::new().max_connections(5).connect(psql_url).await.unwrap();
+  pub async fn new(db_path: &str) -> DataAccessor {
+    let pool = SqlitePoolOptions::new().max_connections(5).connect(db_path).await.unwrap();
     let pool_ref = Arc::new(pool);
     DataAccessor {pool_ref}
   }

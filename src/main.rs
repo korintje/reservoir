@@ -7,7 +7,7 @@ mod db_handler;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let db_url = utils::get_db_url();
+    let db_url = utils::get_db_path();
     let accessor = db_handler::DataAccessor::new(&db_url).await;
     accessor.init_table().await;
     let accessor_state = web::Data::new(accessor);
@@ -40,6 +40,6 @@ async fn main() -> std::io::Result<()> {
                 )
             )
     })
-    .bind("127.0.0.1:8080")?;
+    .bind(utils::get_url())?;
     server.run().await
 }
