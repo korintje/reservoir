@@ -66,7 +66,7 @@ pub struct FullCalendarFilter {
 impl From<ReservationDB> for ReservationReturn {
   fn from(db: ReservationDB) -> Self {
     let start = Local.timestamp(db.start, 0);
-    let end = Local.timestamp(db.start, 0);
+    let end = Local.timestamp(db.end, 0);
     ReservationReturn {
       id: db.id, 
       resource_id: db.resource_id,

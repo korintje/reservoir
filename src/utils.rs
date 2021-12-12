@@ -28,17 +28,21 @@ fn get_config() -> Config {
   };
   let config: Result<Config, toml::de::Error> = toml::from_str(&s);
   match config {
-      Ok(c) => return c,
-      Err(e) => panic!("fail to parse toml: {}", e),
+    Ok(c) => return c,
+    Err(e) => panic!("fail to parse toml: {}", e),
   };
 }
 
 pub fn get_url() -> String {
-  get_config().web_url.unwrap_or("127.0.0.1:8080".to_string())
+  get_config()
+    .web_url
+    .unwrap_or("127.0.0.1:8080".to_string())
 }
 
 pub fn get_db_path() -> String {
-  get_config().db_path.unwrap_or("./db/reservoir.db".to_string())
+  get_config()
+    .db_path
+    .unwrap_or("./db/reservoir.db".to_string())
 }
 
 pub fn hash(input: &Option<String>) -> String {
