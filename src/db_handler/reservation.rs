@@ -57,7 +57,7 @@ impl DataAccessor {
 
   pub async fn get_passhash_by_id(&self, reservation_id: i32) -> Result<PassHash, sqlx::Error> {
     sqlx::query_as(
-      "SELECT passhash FROM reservations WHERE (reservations.id=$1)"
+      "SELECT passhash AS value FROM reservations WHERE id=$1"
     )
     .bind(reservation_id)
     .fetch_one(&*self.pool_ref)
