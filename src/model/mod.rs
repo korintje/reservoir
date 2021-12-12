@@ -27,12 +27,12 @@ pub struct Resource {
 
 #[derive(FromRow, Serialize)]
 pub struct PassHash {
-    pub value: Option<String>,
+    pub passhash: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct PassWord {
-    pub value: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(FromRow, Serialize)]

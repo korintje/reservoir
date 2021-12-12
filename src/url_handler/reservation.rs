@@ -47,12 +47,12 @@ async fn delete_reservation(
     password: web::Json<PassWord>, 
     accessor: web::Data<DataAccessor>) -> impl Responder {
   let id = reservation_id.into_inner();
-  let posted_passhash = utils::hash(&password.value);
+  let posted_passhash = utils::hash(&password.password);
   let get_result = accessor.get_passhash_by_id(id).await;
   if let Err(_) = get_result {
     return MyResponse::item_not_found()
   }
-  if let Some(stored_passhash) = get_result.unwrap().value {
+  if let Some(stored_passhash) = get_result.unwrap().passhash {
     if stored_passhash != posted_passhash {
       return MyResponse::incorrect_password()
     }
