@@ -4,30 +4,39 @@ use serde::{Deserialize, Serialize};
 use crate::utils;
 
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Reservation {
-  pub id: Option<i32>,
-  pub resource_id: Option<i32>,
-  pub resource_name: Option<String>,
-  pub user_id: Option<i32>,
-  pub user_name: Option<String>,
-  pub start: Option<DateTime<Local>>,
-  pub end: Option<DateTime<Local>>,
+#[derive(Deserialize)]
+pub struct ReservationPost {
+  pub resource_id: i32,
+  pub user_id: i32,
+  pub start: DateTime<Local>,
+  pub end: DateTime<Local>,
   pub description: Option<String>,
   pub password: Option<String>,
 }
 
+#[derive(Serialize)]
+pub struct ReservationReturn {
+  pub id: i32,
+  pub resource_id: i32,
+  pub resource_name: String,
+  pub user_id: i32,
+  pub user_name: String,
+  pub start: DateTime<Local>,
+  pub end: DateTime<Local>,
+  pub description: Option<String>,
+}
+
 #[derive(FromRow, Serialize)]
 pub struct ReservationDB {
-    pub id: Option<i32>,
-    pub resource_id: Option<i32>,
-    pub resource_name: Option<String>,
-    pub user_id: Option<i32>,
-    pub user_name: Option<String>,
-    pub start: Option<i64>,
-    pub end: Option<i64>,
-    pub description: Option<String>,
-    pub passhash: Option<String>,
+  pub id: i32,
+  pub resource_id: i32,
+  pub resource_name: String,
+  pub user_id: i32,
+  pub user_name: String,
+  pub start: i64,
+  pub end: i64,
+  pub description: Option<String>,
+  pub passhash: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -40,9 +49,9 @@ pub struct Filter {
 
 #[derive(Serialize)]
 pub struct FullCalendarEvent {
-    pub title: Option<String>,
-    pub start: Option<DateTime<Local>>,
-    pub end: Option<DateTime<Local>>,
+    pub title: String,
+    pub start: DateTime<Local>,
+    pub end: DateTime<Local>,
     pub description: Option<String>,
 }
 
@@ -53,11 +62,12 @@ pub struct FullCalendarFilter {
     pub resource_id: Option<i32>,
 }
 
-impl From<ReservationDB> for Reservation {
+
+impl From<ReservationDB> for ReservationReturn {
   fn from(db: ReservationDB) -> Self {
-    let start = db.start.map(|t| Local.timestamp(t, 0));
-    let end = db.end.map(|t| Local.timestamp(t, 0));
-    Reservation {
+    let start = Local.timestamp(db.start, 0);
+    let end = Local.timestamp(db.start, 0);
+    ReservationReturn {
       id: db.id, 
       resource_id: db.resource_id,
       resource_name: db.resource_name,
@@ -65,22 +75,21 @@ impl From<ReservationDB> for Reservation {
       user_name: db.user_name,
       start,
       end,
-      description: db.description,
-      password: None,            
+      description: db.description,         
     }
   }
 }
 
-impl From<Reservation> for ReservationDB {
-  fn from(reservation: Reservation) -> Self {
-    let start = reservation.start.map(|t| t.timestamp());
-    let end = reservation.end.map(|t| t.timestamp());
+impl From<ReservationPost> for ReservationDB {
+  fn from(reservation: ReservationPost) -> Self {
+    let start = reservation.start.timestamp();
+    let end = reservation.end.timestamp();
     ReservationDB {
-      id: reservation.id,
+      id: 0,
       resource_id: reservation.resource_id,
-      resource_name: reservation.resource_name,
+      resource_name: "".to_string(),
       user_id: reservation.user_id,
-      user_name: reservation.user_name,
+      user_name: "".to_string(),
       start,
       end,
       description: reservation.description,
@@ -89,8 +98,8 @@ impl From<Reservation> for ReservationDB {
   }
 }
 
-impl From<Reservation> for FullCalendarEvent {
-  fn from(reservation: Reservation) -> Self {
+impl From<ReservationReturn> for FullCalendarEvent {
+  fn from(reservation: ReservationReturn) -> Self {
     FullCalendarEvent {
       title: reservation.user_name,
       start: reservation.start,

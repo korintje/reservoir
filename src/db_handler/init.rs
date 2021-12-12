@@ -28,11 +28,11 @@ impl DataAccessor {
   pub async fn create_reservations_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE reservations (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT
-        , user_id       INTEGER
-        , resource_id   INTEGER
-        , start         INTEGER
-        , end           INTEGER
+        id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+        , user_id       INTEGER NOT NULL
+        , resource_id   INTEGER NOT NULL
+        , start         INTEGER NOT NULL
+        , end           INTEGER NOT NULL
         , description   TEXT
         , passhash      TEXT
       )"
@@ -44,9 +44,9 @@ impl DataAccessor {
   pub async fn create_resources_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE resources (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT
-        , resource_name TEXT
-        , active        INTEGER
+        id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+        , resource_name TEXT NOT NULL
+        , active        INTEGER NOT NULL
       )"
     )
     .execute(&*self.pool_ref)
@@ -56,9 +56,9 @@ impl DataAccessor {
   pub async fn create_users_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE users (
-        id              INTEGER PRIMARY KEY AUTOINCREMENT
-        , user_name     TEXT
-        , active        INTEGER
+        id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
+        , user_name     TEXT NOT NULL
+        , active        INTEGER NOT NULL
       )"
     )
     .execute(&*self.pool_ref)

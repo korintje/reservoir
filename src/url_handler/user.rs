@@ -24,7 +24,6 @@ async fn get_users(accessor: web::Data<DataAccessor>) -> impl Responder {
 
 #[post("/users")]
 async fn add_user(user: web::Json<User>, accessor: web::Data<DataAccessor>) -> impl Responder {
-    println!("USER POSTED");
     let user = user.into_inner();
     let result = accessor.add_user(user).await;
     match result {

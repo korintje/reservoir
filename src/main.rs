@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, error, App, HttpServer, HttpResponse};
 mod model;
 mod utils;
 mod response;
@@ -27,6 +27,18 @@ async fn main() -> std::io::Result<()> {
             .service(url_handler::add_reservation)
             .service(url_handler::delete_reservation)
             .service(url_handler::get_fullcalendar_events)
+            .app_data(
+                web::JsonConfig::default().error_handler(
+                    |err, _req| {
+                        error::InternalError::from_response(
+                            "", 
+                            HttpResponse::BadRequest()
+                                .content_type("application/json")
+                                .body(format!(r#"{{"error":"{}"}}"#, err)),
+                        ).into()
+                    }
+                )
+            )
     })
     .bind("127.0.0.1:8080")?;
     server.run().await

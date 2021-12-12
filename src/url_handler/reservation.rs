@@ -2,7 +2,7 @@ use actix_web::{get, post, delete, web, HttpResponse, Responder};
 use crate::db_handler::{DataAccessor};
 use crate::{utils, response};
 use response::{MyResponse};
-use crate::model::{Reservation, Filter, FullCalendarFilter, FullCalendarEvent, PassWord};
+use crate::model::{ReservationPost, Filter, FullCalendarFilter, FullCalendarEvent, PassWord};
 
 #[get("/reservations/{id}")]
 async fn get_reservation(reservation_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
@@ -24,8 +24,16 @@ async fn get_reservations(filter: web::Query<Filter>, accessor: web::Data<DataAc
 }
 
 #[post("/reservations")]
-async fn add_reservation(reservation: web::Json<Reservation>, accessor: web::Data<DataAccessor>) -> impl Responder {
+async fn add_reservation(reservation: web::Json<ReservationPost>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let reservation = reservation.into_inner();
+  let user_id = reservation.user_id;
+  let resource_id = reservation.resource_id;
+  if let Err(_) = accessor.get_user(user_id).await {
+    return MyResponse::not_found(&format!("User {} not found", user_id))
+  }
+  if let Err(_) = accessor.get_resource(resource_id).await {
+    return MyResponse::not_found(&format!("Resource {} not found", resource_id))
+  }
   let result = accessor.add_reservation(reservation).await;
   match result {
     Err(e) => MyResponse::bad_request(&e.to_string()),

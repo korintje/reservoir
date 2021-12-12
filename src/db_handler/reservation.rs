@@ -1,9 +1,9 @@
-use crate::model::{Reservation, ReservationDB, Filter, PassHash};
+use crate::model::{ReservationPost, ReservationReturn, ReservationDB, Filter, PassHash};
 use crate::db_handler::{DataAccessor};
 
 impl DataAccessor {
 
-  pub async fn get_reservation(&self, reservation_id: i32) -> Result<Reservation, sqlx::Error> {
+  pub async fn get_reservation(&self, reservation_id: i32) -> Result<ReservationReturn, sqlx::Error> {
     sqlx::query_as(
       "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id) 
@@ -12,10 +12,10 @@ impl DataAccessor {
     .bind(reservation_id)
     .fetch_one(&*self.pool_ref)
     .await
-    .map(|obj: ReservationDB| Reservation::from(obj))
+    .map(|obj: ReservationDB| ReservationReturn::from(obj))
   }
 
-  pub async fn get_reservations(&self, filter: Filter) -> Result<Vec<Reservation>, sqlx::Error> {
+  pub async fn get_reservations(&self, filter: Filter) -> Result<Vec<ReservationReturn>, sqlx::Error> {
     let mut query = 
       "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash 
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id)"
@@ -34,12 +34,12 @@ impl DataAccessor {
     .await
     .map(|v| {
       v.into_iter().map(|obj: ReservationDB| {
-        Reservation::from(obj)
+        ReservationReturn::from(obj)
       }).collect()
     })
   }
 
-  pub async fn add_reservation(&self, reservation: Reservation) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn add_reservation(&self, reservation: ReservationPost) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
     let reservation_db = ReservationDB::from(reservation);
     sqlx::query(
       "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash) 
