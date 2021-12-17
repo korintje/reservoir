@@ -49,6 +49,7 @@ pub struct Filter {
 
 #[derive(Serialize)]
 pub struct FullCalendarEvent {
+    pub id: i32,
     pub title: String,
     pub start: DateTime<Local>,
     pub end: DateTime<Local>,
@@ -101,6 +102,7 @@ impl From<ReservationPost> for ReservationDB {
 impl From<ReservationReturn> for FullCalendarEvent {
   fn from(reservation: ReservationReturn) -> Self {
     FullCalendarEvent {
+      id: reservation.id,
       title: reservation.user_name,
       start: reservation.start,
       end: reservation.end,
