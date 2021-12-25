@@ -4,18 +4,24 @@ use serde::{Deserialize, Serialize};
 pub mod reservation;
 pub use reservation::*;
 
-fn default_zero() -> i32 { 0 }
-fn default_true() -> bool { true }
+// fn default_zero() -> i32 { 0 }
+// fn default_true() -> bool { true }
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct User {
-  #[serde(default = "default_zero")]
-  pub id: i32,
-  pub user_name: String,
-  #[serde(default = "default_true")]
-  pub active: bool,
+  pub id: Option<i32>,
+  pub user_name: Option<String>,
+  pub active: Option<bool>,
 }
 
+#[derive(FromRow, Serialize, Deserialize)]
+pub struct Resource {
+  pub id: Option<i32>,
+  pub resource_name: Option<String>,
+  pub active: Option<bool>,
+}
+
+/*
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Resource {
   #[serde(default = "default_zero")]
@@ -24,6 +30,7 @@ pub struct Resource {
   #[serde(default = "default_true")]
   pub active: bool,
 }
+*/
 
 #[derive(FromRow, Serialize)]
 pub struct PassHash {

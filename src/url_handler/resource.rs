@@ -1,4 +1,4 @@
-use actix_web::{get, post, delete, web, HttpResponse, Responder};
+use actix_web::{get, post, delete, put, web, HttpResponse, Responder};
 use crate::model::{Resource};
 use crate::db_handler::{DataAccessor};
 use crate::{response};
@@ -41,3 +41,23 @@ async fn delete_resource(resource_id: web::Path<i32>, accessor: web::Data<DataAc
         Ok(_) => MyResponse::ok(),
     }
 }
+
+#[put("/resources/{id}")]
+async fn update_resource(resource_id: web::Path<i32>, resource: web::Json<Resource>, accessor: web::Data<DataAccessor>) -> impl Responder {
+  let resource_id = resource_id.into_inner();
+  let resource = resource.into_inner();
+  if let Some(name) = resource.resource_name {
+    let result = accessor.update_resource_name(resource_id, &name).await;
+    if let Err(e) = result {
+      return MyResponse::bad_request(&e.to_string());
+    }
+  }
+  if let Some(activity) = resource.active {
+    let result = accessor.update_resource_activity(resource_id, activity).await;
+    if let Err(e) = result {
+      return MyResponse::bad_request(&e.to_string());
+    }
+  }
+  MyResponse::ok()
+}
+
