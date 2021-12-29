@@ -26,6 +26,9 @@ async fn get_reservations(filter: web::Query<Filter>, accessor: web::Data<DataAc
 #[post("/reservations")]
 async fn add_reservation(reservation: web::Json<ReservationPost>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let reservation = reservation.into_inner();
+  if !reservation.is_valid() {
+    return MyResponse::bad_request("'Start time' must be earlier than 'End time'")
+  }
   let user_id = reservation.user_id;
   let resource_id = reservation.resource_id;
   if let Err(_) = accessor.get_user(user_id).await {

@@ -63,6 +63,11 @@ pub struct FullCalendarFilter {
     pub resource_id: Option<i32>,
 }
 
+impl ReservationPost {
+  pub fn is_valid(self: &Self) -> bool {
+    if self.end > self.start {true} else {false}
+  }
+}
 
 impl From<ReservationDB> for ReservationReturn {
   fn from(db: ReservationDB) -> Self {
