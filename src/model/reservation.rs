@@ -103,8 +103,10 @@ impl From<ReservationReturn> for FullCalendarEvent {
   fn from(reservation: ReservationReturn) -> Self {
     let mut title = reservation.user_name;
     if let Some(description) = &reservation.description {
-      let note = format!(" ({})", &description);
-      title += &note;
+      if !description.is_empty() {
+        let note = format!(" ({})", &description);
+        title += &note;
+      }
     }
     FullCalendarEvent {
       id: reservation.id,
