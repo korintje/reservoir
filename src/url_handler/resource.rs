@@ -34,18 +34,26 @@ async fn add_resource(resource: web::Json<Resource>, accessor: web::Data<DataAcc
 
 #[delete("/resources/{id}")]
 async fn delete_resource(resource_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
-    let resource_id = resource_id.into_inner();
-    let result = accessor.delete_resource(resource_id).await;
-    match result {
-        Err(_) => MyResponse::item_not_found(),
-        Ok(_) => MyResponse::ok(),
-    }
+  let resource_id = resource_id.into_inner();
+  let get_result = accessor.get_resource(resource_id).await;
+  if let Err(_) = get_result {
+    return MyResponse::item_not_found()
+  }
+  let result = accessor.delete_resource(resource_id).await;
+  match result {
+      Err(_) => MyResponse::item_not_found(),
+      Ok(_) => MyResponse::ok(),
+  }
 }
 
 #[put("/resources/{id}")]
 async fn update_resource(resource_id: web::Path<i32>, resource: web::Json<Resource>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let resource_id = resource_id.into_inner();
   let resource = resource.into_inner();
+  let get_result = accessor.get_resource(resource_id).await;
+  if let Err(_) = get_result {
+    return MyResponse::item_not_found()
+  }
   if let Some(name) = resource.resource_name {
     let result = accessor.update_resource_name(resource_id, &name).await;
     if let Err(e) = result {
