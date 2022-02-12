@@ -73,5 +73,53 @@ impl DataAccessor {
     .await
   }
 
+  pub async fn update_user(&self, reservation_id: i32, new_user: i32) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET user_id=$1 WHERE id=$2")
+      .bind(new_user)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
+  pub async fn update_resource(&self, reservation_id: i32, new_resource: i32) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET resource_id=$1 WHERE id=$2")
+      .bind(new_resource)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
+  pub async fn update_start(&self, reservation_id: i32, new_start: i64) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET start=$1 WHERE id=$2")
+      .bind(new_start)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
+  pub async fn update_end(&self, reservation_id: i32, new_end: i64) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET end=$1 WHERE id=$2")
+      .bind(new_end)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
+  pub async fn update_description(&self, reservation_id: i32, new_description: &str) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET description=$1 WHERE id=$2")
+      .bind(new_description)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
+  pub async fn update_passhash(&self, reservation_id: i32, new_passhash: &str) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+    sqlx::query("UPDATE reservations SET passhash=$1 WHERE id=$2")
+      .bind(new_passhash)
+      .bind(reservation_id)
+      .execute(&*self.pool_ref)
+      .await
+  }
+
 }
 

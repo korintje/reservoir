@@ -14,6 +14,17 @@ pub struct ReservationPost {
   pub password: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct ReservationPut {
+  pub resource_id: Option<i32>,
+  pub user_id: Option<i32>,
+  pub start: Option<DateTime<Local>>,
+  pub end: Option<DateTime<Local>>,
+  pub description: Option<String>,
+  pub password: Option<String>,
+  pub new_password: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct ReservationReturn {
   pub id: i32,
@@ -94,7 +105,7 @@ impl From<ReservationPost> for ReservationDB {
       start,
       end,
       description: reservation.description,
-      passhash: Some(utils::hash(&reservation.password)),
+      passhash: Some(utils::hash_anyway(&reservation.password)),
     }
   }
 }
