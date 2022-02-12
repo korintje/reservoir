@@ -74,6 +74,11 @@ pub struct FullCalendarFilter {
     pub resource_id: Option<i32>,
 }
 
+impl ReservationPost {
+  pub fn is_valid(self: &Self) -> bool {
+    if self.end > self.start {true} else {false}
+  }
+}
 
 impl From<ReservationDB> for ReservationReturn {
   fn from(db: ReservationDB) -> Self {
@@ -112,9 +117,16 @@ impl From<ReservationPost> for ReservationDB {
 
 impl From<ReservationReturn> for FullCalendarEvent {
   fn from(reservation: ReservationReturn) -> Self {
+    let mut title = reservation.user_name;
+    if let Some(description) = &reservation.description {
+      if !description.is_empty() {
+        let note = format!(" ({})", &description);
+        title += &note;
+      }
+    }
     FullCalendarEvent {
       id: reservation.id,
-      title: reservation.user_name,
+      title: title,
       start: reservation.start,
       end: reservation.end,
       description: reservation.description,

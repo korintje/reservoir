@@ -37,6 +37,10 @@ async fn add_user(user: web::Json<User>, accessor: web::Data<DataAccessor>) -> i
 #[delete("/users/{id}")]
 async fn delete_user(user_id: web::Path<i32>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let user_id = user_id.into_inner();
+  let get_result = accessor.get_user(user_id).await;
+  if let Err(_) = get_result {
+    return MyResponse::item_not_found()
+  }
   let result = accessor.delete_user(user_id).await;
   match result {
     Err(_) => MyResponse::item_not_found(),
@@ -48,6 +52,10 @@ async fn delete_user(user_id: web::Path<i32>, accessor: web::Data<DataAccessor>)
 async fn update_user(user_id: web::Path<i32>, user: web::Json<User>, accessor: web::Data<DataAccessor>) -> impl Responder {
   let user_id = user_id.into_inner();
   let user = user.into_inner();
+  let get_result = accessor.get_user(user_id).await;
+  if let Err(_) = get_result {
+    return MyResponse::item_not_found()
+  }
   if let Some(name) = user.user_name {
     let result = accessor.update_user_name(user_id, &name).await;
     if let Err(e) = result {
