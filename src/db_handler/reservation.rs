@@ -39,7 +39,7 @@ impl DataAccessor {
     })
   }
 
-  pub async fn add_reservation(&self, reservation: ReservationPost) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn add_reservation(&self, reservation: ReservationPost) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     let reservation_db = ReservationDB::from(reservation);
     sqlx::query(
       "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash) 
@@ -64,7 +64,7 @@ impl DataAccessor {
     .await
   }
 
-  pub async fn delete_reservation(&self, reservation_id: i32) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn delete_reservation(&self, reservation_id: i32) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     sqlx::query(
       "DELETE FROM reservations WHERE id=$1"
     )

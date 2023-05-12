@@ -1,4 +1,5 @@
 use actix_web::{web, error, App, HttpServer, HttpResponse};
+use actix_cors::Cors;
 mod model;
 mod utils;
 mod response;
@@ -12,7 +13,14 @@ async fn main() -> std::io::Result<()> {
     accessor.init_table().await;
     let accessor_state = web::Data::new(accessor);
     let server = HttpServer::new(move || {
+
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header();
+
         App::new()
+            .wrap(cors)
             .app_data(accessor_state.clone())
             .service(url_handler::get_resource)
             .service(url_handler::get_resources)

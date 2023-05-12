@@ -25,7 +25,7 @@ impl DataAccessor {
     if table_count.count == 0 {false} else {true}
   }
   
-  pub async fn create_reservations_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn create_reservations_table(&self) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE reservations (
         id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
@@ -41,7 +41,7 @@ impl DataAccessor {
     .await
   }
   
-  pub async fn create_resources_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn create_resources_table(&self) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE resources (
         id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
@@ -53,7 +53,7 @@ impl DataAccessor {
     .await
   }
   
-  pub async fn create_users_table(&self) -> Result<sqlx::sqlite::SqliteDone, sqlx::Error> {
+  pub async fn create_users_table(&self) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     sqlx::query(
       "CREATE TABLE users (
         id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
