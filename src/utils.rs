@@ -45,12 +45,16 @@ pub fn get_db_path() -> String {
     .unwrap_or("./db/reservoir.db".to_string())
 }
 
-pub fn hash(input: &Option<String>) -> String {
-  let mut hashed = Sha256::new();
+pub fn hash_anyway(input: &Option<String>) -> String {
   let string = match input {
     Some(s) => s,
     None => "",
   };
-  hashed.update(string);
+  hash(string)
+}
+
+pub fn hash(input: &str) -> String {
+  let mut hashed = Sha256::new();
+  hashed.update(input);
   format!("{:X}", hashed.finalize())
 }

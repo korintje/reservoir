@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .service(url_handler::add_reservation)
             .service(url_handler::delete_reservation)
             .service(url_handler::get_fullcalendar_events)
+            .service(url_handler::update_reservation)
             .app_data(
                 web::JsonConfig::default().error_handler(
                     |err, _req| {
