@@ -35,6 +35,7 @@ impl DataAccessor {
         , end           INTEGER NOT NULL
         , description   TEXT
         , passhash      TEXT
+        , created_at    INTEGER NOT NULL
       )"
     )
     .execute(&*self.pool_ref)
@@ -47,6 +48,8 @@ impl DataAccessor {
         id              INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT
         , resource_name TEXT NOT NULL
         , active        INTEGER NOT NULL
+        , capacity      INTEGER NOT NULL
+        , custom_field  TEXT NOT NULL
       )"
     )
     .execute(&*self.pool_ref)

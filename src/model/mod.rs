@@ -19,6 +19,8 @@ pub struct Resource {
   pub id: Option<i32>,
   pub resource_name: Option<String>,
   pub active: Option<bool>,
+  pub capacity: Option<i32>,
+  pub custom_field: Option<String>,
 }
 
 /*
@@ -46,3 +48,15 @@ pub struct PassWord {
 pub struct TableCount {
     pub count: i32,
 }
+
+/*
+#[derive(FromRow, Serialize, Deserialize)]
+pub struct Label {
+  pub id: Option<i32>,
+  pub reservation_id: Option<i32>,
+  pub user_id: Option<i32>,
+  pub category: Option<i32>,
+  pub description: Option<i32>,
+  pub passhash: Option<String>,
+}
+*/

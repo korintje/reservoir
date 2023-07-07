@@ -5,7 +5,7 @@ impl DataAccessor {
 
   pub async fn get_reservation(&self, reservation_id: i32) -> Result<ReservationReturn, sqlx::Error> {
     sqlx::query_as(
-      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash
+      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash, created_at 
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id) 
       WHERE (reservations.id=$1)"
     )
@@ -17,7 +17,7 @@ impl DataAccessor {
 
   pub async fn get_reservations(&self, filter: Filter) -> Result<Vec<ReservationReturn>, sqlx::Error> {
     let mut query = 
-      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash 
+      "SELECT reservations.id AS id, user_id, user_name, resource_id, resource_name, start, end, description, passhash, created_at 
       FROM reservations JOIN users ON (reservations.user_id=users.id) JOIN resources ON (reservations.resource_id=resources.id)"
       .to_string();
     let mut options = Vec::new();
@@ -42,8 +42,8 @@ impl DataAccessor {
   pub async fn add_reservation(&self, reservation: ReservationPost) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     let reservation_db = ReservationDB::from(reservation);
     sqlx::query(
-      "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash) 
-      VALUES ($1, $2, $3, $4, $5, $6)"
+      "INSERT INTO reservations (resource_id, user_id, start, end, description, passhash, created_at) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(reservation_db.resource_id)
     .bind(reservation_db.user_id)
@@ -51,6 +51,7 @@ impl DataAccessor {
     .bind(reservation_db.end)
     .bind(reservation_db.description)
     .bind(reservation_db.passhash)
+    .bind(reservation_db.created_at)
     .execute(&*self.pool_ref)
     .await
   }

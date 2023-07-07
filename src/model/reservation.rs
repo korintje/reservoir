@@ -35,6 +35,7 @@ pub struct ReservationReturn {
   pub start: DateTime<Local>,
   pub end: DateTime<Local>,
   pub description: Option<String>,
+  pub created_at: DateTime<Local>,
 }
 
 #[derive(FromRow, Serialize)]
@@ -48,6 +49,7 @@ pub struct ReservationDB {
   pub end: i64,
   pub description: Option<String>,
   pub passhash: Option<String>,
+  pub created_at: i64,
 }
 
 #[derive(Deserialize)]
@@ -84,6 +86,7 @@ impl From<ReservationDB> for ReservationReturn {
   fn from(db: ReservationDB) -> Self {
     let start = Local.timestamp(db.start, 0);
     let end = Local.timestamp(db.end, 0);
+    let created_at = Local.timestamp(db.created_at, 0);
     ReservationReturn {
       id: db.id, 
       resource_id: db.resource_id,
@@ -92,7 +95,8 @@ impl From<ReservationDB> for ReservationReturn {
       user_name: db.user_name,
       start,
       end,
-      description: db.description,         
+      description: db.description,
+      created_at,     
     }
   }
 }
@@ -111,6 +115,7 @@ impl From<ReservationPost> for ReservationDB {
       end,
       description: reservation.description,
       passhash: Some(utils::hash_anyway(&reservation.password)),
+      created_at: Local::now().timestamp(),
     }
   }
 }
@@ -126,7 +131,7 @@ impl From<ReservationReturn> for FullCalendarEvent {
     }
     FullCalendarEvent {
       id: reservation.id,
-      title: title,
+      title,
       start: reservation.start,
       end: reservation.end,
       description: reservation.description,

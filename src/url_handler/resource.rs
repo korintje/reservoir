@@ -66,6 +66,18 @@ async fn update_resource(resource_id: web::Path<i32>, resource: web::Json<Resour
       return MyResponse::bad_request(&e.to_string());
     }
   }
+  if let Some(capacity) = resource.capacity {
+    let result = accessor.update_resource_capacity(resource_id, capacity).await;
+    if let Err(e) = result {
+      return MyResponse::bad_request(&e.to_string());
+    }
+  }
+  if let Some(custom_field) = resource.custom_field {
+    let result = accessor.update_resource_custom_field(resource_id, &custom_field).await;
+    if let Err(e) = result {
+      return MyResponse::bad_request(&e.to_string());
+    }
+  }
   MyResponse::ok()
 }
 
