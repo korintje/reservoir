@@ -57,6 +57,16 @@ sudo bash install.sh --import-db /path/to/reservoir-export.db
 
 既存の利用者・設備・予約・旧パスワードハッシュを維持してマイグレーションします。旧SHA-256ハッシュは、正しい予約パスワードで変更・取消したときにArgon2へ更新されます。パスワードを変更して保存することもできます。
 
+不整合な予約期間を推定補正する場合は、ウィザードの「Auto-assume」でyesを選ぶか、以下のオプションを使います。既定はOFFです。
+
+```bash
+sudo bash install.sh --auto-assume
+# 初回の旧DB取り込みと組み合わせる場合
+sudo bash install.sh --import-db /path/to/reservoir-export.db --auto-assume
+```
+
+サービス停止中にDB全体をバックアップし、開始が終了より後なら反転、同時刻なら削除します。補正・削除前のレコードはreservation_repair_historyにも保存します。補正した日時が本来の意図と一致する保証はありません。補正後の時間重複・参照先欠落・日時範囲の検査は引き続き実施するため、別の不整合があれば起動を拒否します。すでに導入失敗後のDBがPiにある場合は--import-dbを再指定せず--auto-assumeで再実行してください。
+
 開始と終了の逆転、不正な日時、参照先の欠落、同一設備の重複がある旧DBは起動前に拒否します。元データは自動削除・修正しません。バックアップ上で該当予約を確認してから移行をやり直してください。更新時は移行前のバックアップを保存し、アプリ切替に失敗した場合は旧DBと旧リリースへ戻します。
 
 Piで設備・利用者・日時・変更と取消を確認した後、利用者へ新しいアクセス先を案内してVPS側への書き込みを止めます。
@@ -125,7 +135,7 @@ npm audit --audit-level=low
 npx playwright install chromium
 npm run e2e
 cd ../deploy
-python3 -m unittest -v test_deploy
+python3 -m unittest discover -v
 ```
 
 E2Eは一時DBで管理者ログイン、設備・利用者追加、予約、重複拒否、パスワード変更操作、取消、設定変更、PC・スマートフォン表示を検証します。8080と5173が空いている必要があります。実行中のサーバーを止めてからRustを再ビルドしてください。

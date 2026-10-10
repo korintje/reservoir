@@ -39,5 +39,5 @@ jobs:
           bash -n install.sh
           python3 -m compileall -q deploy scripts
           cd deploy
-          python3 -m unittest -v test_deploy
+          python3 -m unittest discover -v
           python3 validate_nginx.py /usr/sbin/nginx
