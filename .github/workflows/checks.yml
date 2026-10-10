@@ -1,0 +1,43 @@
+name: Checks
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Backend checks
+        working-directory: backend
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+          cargo build --locked
+      - name: Frontend checks
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npm audit --audit-level=low
+          npx playwright install --with-deps chromium
+          npm run e2e
+      - name: Deployment checks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          bash -n install.sh
+          python3 -m compileall -q deploy scripts
+          cd deploy
+          python3 -m unittest -v test_deploy
+          python3 validate_nginx.py /usr/sbin/nginx

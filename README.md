@@ -1,385 +1,142 @@
-# reservoir
+# Reservoir
 
-Rust、Actix Web、SQLiteで作られた、設備や部屋などのリソースを予約するためのWeb APIです。
+研究室の設備を予約するための、小規模な予約管理システムです。ブラウザーから予約の閲覧・作成・変更・取消を行い、管理者が利用者・設備・予約ルールを設定します。
 
-## 主な機能
+## できること
 
-- 利用者（user）の登録、取得、更新、削除
-- 予約対象（resource）の登録、取得、更新、削除
-- 予約（reservation）の登録、検索、更新、削除
-- FullCalendarのイベント形式による予約一覧の取得
+- PC向けの日・週・月カレンダー、スマートフォン向けの一覧、設備・利用者による絞り込み。
+- 同一設備の時間重複禁止、設定可能な予約上限（初期15日）、終了済み予約の変更・取消禁止。
+- 共通Basic認証のON/OFF、独立した管理者ログイン、予約別パスワード。
+- 利用者・設備の追加・編集・無効化、Slack連絡先、研究室名と案内文の設定。
+- 予約変更の競合検出、手動Slack連絡の案内、定期バックアップと復元。
 
-## 必要な環境
+画面・操作メッセージは英語、予約の表示・入力は日本時間です。データはUTCで保存します。設備の定員・台数は参考情報であり、値に関係なく同時予約は1件です。
 
-- Rust 2021 Editionに対応したRustツールチェーン（Cargoを含む）
+## Raspberry Piへ導入
 
-## 起動方法
+想定環境はRaspberry Pi 4、64bitのUbuntu Server 24.04以降、インターネット接続、sudo権限です。ビルドのため4GB以上の空きディスクが必要です。ソースのビルドには時間がかかります。32bit OSは対象外です。
 
-リポジトリのルートで次のコマンドを実行します。
+このリポジトリーをPiへコピーして、そのディレクトリーで実行します。開発用node_modulesやtarget、既存DB、秘密設定はコピー不要です。
 
-```console
-cargo run
+```bash
+bash install.sh --plan             # OSを変更せず導入内容を確認
+sudo bash install.sh              # 対話式に導入
 ```
 
-デフォルトでは `http://127.0.0.1:8080` でAPIが起動します。起動時にSQLiteのテーブルが存在しなければ自動的に作成されます。
+ウィザードが次を設定します。
 
-接続先とデータベースのパスは `reservoir.toml` で変更できます。
+1. LAN限定 / インターネット＋LAN、アクセス名またはIP、LANの許可ネットワーク。
+2. HTTPS（自己署名、既存証明書、ACME）、共通Basic認証、管理者パスワード。
+3. SSHポートの通信許可、時刻同期、OSタイムゾーン、自動セキュリティ更新。
+4. 必要パッケージ、RustとNode.js、専用ユーザーによるビルド、Nginx、systemd。
+5. 毎日のバックアップと保持期間、動作確認、任意の固定IP設定。
 
-```toml
-web_url = "127.0.0.1:8080"
-db_path = "./db/reservoir.db"
+アプリは専用ユーザーで127.0.0.1:8080に待ち受けます。NginxがHTTPSと静的画面を提供し、/apiをそのまま転送します。WebプロセスにはOS管理権限を与えません。インストーラーは自分が付けたUFWのWeb許可ルールを更新し、他のアプリのルールは削除しません。
+
+LANでは現在のIPが入力候補になります。独自のホスト名を使う場合は研究室DNS等で名前解決を設定してください。自己署名証明書では利用端末への信頼設定が必要です。証明書の期限は825日です。
+
+インターネット公開では公開ドメイン名と既存証明書またはACMEを選択します。DNS、大学側の公開許可、ルーターの転送などPiの外側の設定は別途必要です。ACMEのHTTP検証には外部から80番ポートへ到達できる必要があります。取得後の更新とNginxの再読み込みはCertbotで行います。LAN限定では自己署名または既存証明書を使います。インターネット公開からLAN限定へ切り替えて既存証明書を引き継ぐ場合、その後の証明書更新はDNS検証等で別途管理してください。
+
+固定IPは最後にNetplanの一時適用で確認します。アクセス用IPを変更する場合は公開設定と証明書の名前も合わせて変更してください。ネットワーク設定中にSSHが切れた場合はPiのコンソールから確認できます。
+
+## 旧VPSからのデータ移行
+
+**稼働中のDBファイルを単純にコピーせず、SQLiteのバックアップ機能でコピーを作成してください。**
+
+VPSで予約更新を停止するか、SQLiteの整合したスナップショットを取得します。
+
+```bash
+sqlite3 /path/to/reservoir.db ".backup '/path/to/reservoir-export.db'"
 ```
 
-設定ファイルとデータベースの相対パスは、プロセスのカレントディレクトリを基準に解決されます。そのため、通常はリポジトリのルートから起動してください。
+取得したコピーをPiへ転送し、初回導入時に指定します。
 
-## API概要
-
-ベースURLは、デフォルト設定の場合 `http://127.0.0.1:8080` です。リクエストおよびレスポンスの本文にはJSONを使用します。
-
-| メソッド | パス | 説明 |
-| --- | --- | --- |
-| `GET` | `/users` | 利用者一覧を取得 |
-| `GET` | `/users/{id}` | 利用者を1件取得 |
-| `POST` | `/users` | 利用者を登録 |
-| `PUT` | `/users/{id}` | 利用者を更新 |
-| `DELETE` | `/users/{id}` | 利用者を削除 |
-| `GET` | `/resources` | リソース一覧を取得 |
-| `GET` | `/resources/{id}` | リソースを1件取得 |
-| `POST` | `/resources` | リソースを登録 |
-| `PUT` | `/resources/{id}` | リソースを更新 |
-| `DELETE` | `/resources/{id}` | リソースを削除 |
-| `GET` | `/reservations` | 条件に合う予約一覧を取得 |
-| `GET` | `/reservations/{id}` | 予約を1件取得 |
-| `POST` | `/reservations` | 予約を登録 |
-| `PUT` | `/reservations/{id}` | 予約を更新 |
-| `DELETE` | `/reservations/{id}` | 予約を削除 |
-| `GET` | `/fullcalendar_events` | FullCalendar形式で予約一覧を取得 |
-
-日時はRFC 3339形式で指定します。たとえば、日本時間の2026年7月10日9時は `2026-07-10T09:00:00+09:00` です。
-
-### 共通レスポンス
-
-登録、更新、削除に成功すると次のレスポンスを返します。
-
-```json
-{
-  "code": 2000,
-  "message": "Success"
-}
+```bash
+sudo bash install.sh --import-db /path/to/reservoir-export.db
 ```
 
-代表的なエラーは次のとおりです。
+既存の利用者・設備・予約・旧パスワードハッシュを維持してマイグレーションします。旧SHA-256ハッシュは、正しい予約パスワードで変更・取消したときにArgon2へ更新されます。パスワードを変更して保存することもできます。
 
-| HTTPステータス | `code` | 内容 |
-| --- | ---: | --- |
-| `400 Bad Request` | `4000` | 入力値またはデータベース操作が不正 |
-| `401 Unauthorized` | `4001` | 予約のパスワードが不一致 |
-| `404 Not Found` | `4004` | 対象が存在しない |
-| `500 Internal Server Error` | `5000` | サーバー内部のエラー |
+開始と終了の逆転、不正な日時、参照先の欠落、同一設備の重複がある旧DBは起動前に拒否します。元データは自動削除・修正しません。バックアップ上で該当予約を確認してから移行をやり直してください。更新時は移行前のバックアップを保存し、アプリ切替に失敗した場合は旧DBと旧リリースへ戻します。
 
-JSONの構文や型が不正な場合は、`400 Bad Request` と `{"error":"..."}` を返します。
+Piで設備・利用者・日時・変更と取消を確認した後、利用者へ新しいアクセス先を案内してVPS側への書き込みを止めます。
 
-## 利用者API
+## 日常運用
 
-利用者は次のフィールドを持ちます。
+ブラウザーの「設定」に管理者パスワードでログインし、設備・利用者と予約ルールを管理します。履歴がある設備・利用者は削除せず無効化してください。管理者にも終了済み予約の変更や予約パスワードの迂回は設けていません。
 
-| フィールド | 型 | 説明 |
-| --- | --- | --- |
-| `id` | integer or null | 利用者ID。登録時は省略可能 |
-| `user_name` | string or null | 利用者名。登録時は必須 |
-| `active` | boolean or null | 有効状態。登録時の省略値は `true` |
+公開範囲やBasic認証の変更はサーバーで行います。
 
-### 一覧・1件取得
-
-```http
-GET /users
-GET /users/{id}
+```bash
+sudo reservoirctl configure
+sudo reservoirctl status
+sudo reservoirctl backup
+sudo reservoirctl restore /var/backups/reservoir/reservoir-....db
+sudo journalctl -u reservoir -n 100 --no-pager
 ```
 
-一覧は利用者オブジェクトの配列、1件取得は利用者オブジェクトを返します。
+restoreは現在のDBを事前保存し、確認入力後にサービスを停止して復元します。バックアップには利用者情報とパスワードハッシュが含まれます。サーバーの故障に備えてバックアップを別の機器にも保管してください。
 
-### 登録
+設定画面の保守タブからもDBをダウンロードできます。定期バックアップは初期設定で毎日03:00、30日保持です。保守タブに最終実行の成功・失敗を表示します。「手動連絡対象の記録」は対象操作の件数であり、Slackへ連絡済みかどうかは判定しません。
 
-```http
-POST /users
-Content-Type: application/json
+更新は新しいソースでsudo bash install.shを再実行します。入力候補は保存した公開設定を引き継ぎます。OSパッケージの導入や自動更新設定まで元に戻す処理は行いません。途中で失敗した場合は表示された段階とログを確認し、同じスクリプトを再実行してください。
 
-{
-  "user_name": "山田太郎",
-  "active": true
-}
+| 配置 | 内容 |
+| --- | --- |
+| /opt/reservoir/releases/ | ビルド済みリリース |
+| /opt/reservoir/current | 使用中リリースへのリンク |
+| /etc/reservoir/ | アプリ・公開設定・認証情報 |
+| /var/lib/reservoir/reservoir.db | 本番DB |
+| /var/backups/reservoir/ | 初期設定のバックアップ保存先 |
+
+## 予約と認証の仕様
+
+予約上限は現在時刻からn×24時間後までです。開始・終了とも上限内で、終了は開始より後である必要があります。境界が隣接する予約は重複に含めません。
+
+利用中の予約は開始日時の変更と取消ができません。終了済みは変更・取消できません。開始まで24時間以内の開始延期・終了繰上げ・取消、利用中の終了繰上げは保存後にSlack手動連絡を案内します。操作と同じトランザクションで通知イベントを記録します。現在はSlackへ自動送信しません。設備ごとのチャネルIDを保持し、後から通知処理を追加できます。
+
+共通Basic認証をOFFにすると、アクセス可能な人が予約を閲覧・作成できます。予約パスワードは任意のため、パスワードなし予約はアクセス可能な人が変更・取消できます。管理者認証はBasicのON/OFFに関係なく必須です。Basic認証のON/OFFはNginxが実際のアクセスを制御し、アプリ設定は状態表示に使います。
+
+## 開発と検証
+
+必要な環境はRust、Node.js 24 LTS、Python 3です。依存はCargo.lockとpackage-lock.jsonで固定します。
+
+```bash
+cd backend
+cargo build --locked
+cd ../frontend
+npm ci
+cd ..
+python scripts/dev.py
 ```
 
-### 更新
+初回は開発用管理者パスワードを入力します。開発データは.local/に保存し、同梱の旧DBや本番DBには触れません。画面はhttp://127.0.0.1:5173、APIは8080です。HTTPでの開発に限りSecure Cookieを無効にします。
 
-```http
-PUT /users/{id}
-Content-Type: application/json
-
-{
-  "user_name": "山田花子",
-  "active": false
-}
+```bash
+cd backend
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo build --locked
+cd ../frontend
+npm test
+npm run build
+npm audit --audit-level=low
+npx playwright install chromium
+npm run e2e
+cd ../deploy
+python3 -m unittest -v test_deploy
 ```
 
-指定したフィールドだけを更新します。`id` はリクエスト本文ではなくURLの値が使われます。
+E2Eは一時DBで管理者ログイン、設備・利用者追加、予約、重複拒否、パスワード変更操作、取消、設定変更、PC・スマートフォン表示を検証します。8080と5173が空いている必要があります。実行中のサーバーを止めてからRustを再ビルドしてください。
 
-### 削除
+UbuntuでのOS設定・systemd・証明書発行を含むインストーラーの通し実行はPi実機での確認が必要です。ローカルの検証結果と未確認項目はIMPLEMENTATION_STATUS.mdに記載しています。
 
-```http
-DELETE /users/{id}
-```
+## 構成
 
-## リソースAPI
+- frontend/: React / TypeScript / Vite / FullCalendar。
+- backend/: Actix Web / SQLite / sqlx migrations。
+- deploy/: Ubuntu導入、Nginx設定生成、運用CLI、systemd。
+- scripts/: 開発起動とブラウザーテスト用サーバー。
 
-リソースは次のフィールドを持ちます。
-
-| フィールド | 型 | 説明 |
-| --- | --- | --- |
-| `id` | integer or null | リソースID。登録時は省略可能 |
-| `resource_name` | string or null | リソース名。登録時は実質必須 |
-| `active` | boolean or null | 有効状態。登録時は実質必須 |
-| `capacity` | integer or null | 定員。登録時は実質必須 |
-| `custom_field` | string or null | 任意情報。登録時は実質必須 |
-
-`POST /resources` ではSQLiteの各列が `NOT NULL` のため、`id` 以外のフィールドをすべて指定してください。
-
-### 一覧・1件取得
-
-```http
-GET /resources
-GET /resources/{id}
-```
-
-一覧はリソースオブジェクトの配列、1件取得はリソースオブジェクトを返します。
-
-### 登録
-
-```http
-POST /resources
-Content-Type: application/json
-
-{
-  "resource_name": "会議室A",
-  "active": true,
-  "capacity": 8,
-  "custom_field": "3階"
-}
-```
-
-### 更新
-
-```http
-PUT /resources/{id}
-Content-Type: application/json
-
-{
-  "capacity": 10,
-  "custom_field": "3階・モニターあり"
-}
-```
-
-指定したフィールドだけを更新します。`id` はリクエスト本文ではなくURLの値が使われます。
-
-### 削除
-
-```http
-DELETE /resources/{id}
-```
-
-## 予約API
-
-### 一覧取得
-
-```http
-GET /reservations
-```
-
-次のクエリーパラメーターを任意で組み合わせられます。
-
-| パラメーター | 型 | 条件 |
-| --- | --- | --- |
-| `from` | RFC 3339 datetime | 予約終了日時がこの値より後 |
-| `until` | RFC 3339 datetime | 予約開始日時がこの値以前 |
-| `user_id` | integer | 利用者IDが一致 |
-| `resource_id` | integer | リソースIDが一致 |
-
-`from` と `until` を指定すると、その期間と重なる予約を取得できます。URL中の `+` は `%2B` にエンコードしてください。
-
-```http
-GET /reservations?from=2026-07-10T00%3A00%3A00%2B09%3A00&until=2026-07-11T00%3A00%3A00%2B09%3A00&resource_id=1
-```
-
-レスポンス例:
-
-```json
-[
-  {
-    "id": 1,
-    "resource_id": 1,
-    "resource_name": "会議室A",
-    "user_id": 1,
-    "user_name": "山田太郎",
-    "start": "2026-07-10T09:00:00+09:00",
-    "end": "2026-07-10T10:00:00+09:00",
-    "description": "週次ミーティング",
-    "created_at": "2026-07-09T12:00:00+09:00"
-  }
-]
-```
-
-### 1件取得
-
-```http
-GET /reservations/{id}
-```
-
-### 登録
-
-```http
-POST /reservations
-Content-Type: application/json
-
-{
-  "resource_id": 1,
-  "user_id": 1,
-  "start": "2026-07-10T09:00:00+09:00",
-  "end": "2026-07-10T10:00:00+09:00",
-  "description": "週次ミーティング",
-  "password": "secret"
-}
-```
-
-`resource_id`、`user_id`、`start`、`end` は必須です。`description` と `password` は省略または `null` にできます。開始日時は終了日時より前でなければなりません。
-
-パスワードそのものは保存されず、SHA-256ハッシュが保存されます。パスワードを省略した予約は空文字列をパスワードとして扱います。
-
-### 更新
-
-```http
-PUT /reservations/{id}
-Content-Type: application/json
-
-{
-  "password": "secret",
-  "start": "2026-07-10T10:00:00+09:00",
-  "end": "2026-07-10T11:00:00+09:00",
-  "description": "開始時刻変更",
-  "new_password": "new-secret"
-}
-```
-
-`password` には現在のパスワードを指定し、更新したいフィールドだけを加えます。更新できるフィールドは `resource_id`、`user_id`、`start`、`end`、`description` です。`new_password` を指定するとパスワードも変更できます。
-
-### 削除
-
-`DELETE` でもJSON本文に現在のパスワードを指定します。
-
-```http
-DELETE /reservations/{id}
-Content-Type: application/json
-
-{
-  "password": "secret"
-}
-```
-
-パスワードなしで登録した予約では、`password` を `null` にするか空文字列を指定します。
-
-### FullCalendar形式
-
-```http
-GET /fullcalendar_events
-```
-
-任意のクエリーパラメーターとして `start`、`end`、`resource_id` を指定できます。`start` と `end` はRFC 3339形式です。
-
-レスポンス例:
-
-```json
-[
-  {
-    "id": 1,
-    "title": "山田太郎 (週次ミーティング)",
-    "start": "2026-07-10T09:00:00+09:00",
-    "end": "2026-07-10T10:00:00+09:00",
-    "description": "週次ミーティング"
-  }
-]
-```
-
-## ターミナルからAPIを利用する例
-
-以下はAPIを起動した状態で、別のターミナルから `curl` を実行する一連の例です。Windows PowerShellでは、組み込みの別名との衝突を避けるため `curl.exe` と読み替えられます。
-
-### 1. 利用者を登録
-
-```console
-curl -X POST http://127.0.0.1:8080/users \
-  -H "Content-Type: application/json" \
-  -d '{"user_name":"山田太郎","active":true}'
-```
-
-### 2. リソースを登録
-
-```console
-curl -X POST http://127.0.0.1:8080/resources \
-  -H "Content-Type: application/json" \
-  -d '{"resource_name":"会議室A","active":true,"capacity":8,"custom_field":"3階"}'
-```
-
-### 3. 登録されたIDを確認
-
-```console
-curl http://127.0.0.1:8080/users
-curl http://127.0.0.1:8080/resources
-```
-
-以降の例では、利用者とリソースのIDがともに `1` だったものとします。
-
-### 4. 予約を登録
-
-```console
-curl -X POST http://127.0.0.1:8080/reservations \
-  -H "Content-Type: application/json" \
-  -d '{"resource_id":1,"user_id":1,"start":"2026-07-10T09:00:00+09:00","end":"2026-07-10T10:00:00+09:00","description":"週次ミーティング","password":"secret"}'
-```
-
-### 5. 予約を検索
-
-`curl -G --data-urlencode` を使うと、日時の `+` などを安全にURLエンコードできます。
-
-```console
-curl -G http://127.0.0.1:8080/reservations \
-  --data-urlencode "from=2026-07-10T00:00:00+09:00" \
-  --data-urlencode "until=2026-07-11T00:00:00+09:00" \
-  --data-urlencode "resource_id=1"
-```
-
-### 6. 予約を更新
-
-```console
-curl -X PUT http://127.0.0.1:8080/reservations/1 \
-  -H "Content-Type: application/json" \
-  -d '{"password":"secret","description":"議題追加"}'
-```
-
-### 7. 予約を削除
-
-```console
-curl -X DELETE http://127.0.0.1:8080/reservations/1 \
-  -H "Content-Type: application/json" \
-  -d '{"password":"secret"}'
-```
-
-## 実装上の注意
-
-- 認証機構はなく、CORSはすべてのオリジン、メソッド、ヘッダーを許可しています。公開ネットワークで利用する場合は、認証、アクセス制御、TLSなどを別途用意してください。
-- 利用者やリソースの `active` は情報として保存されますが、現在の実装では無効な利用者・リソースによる予約を拒否しません。
-- 予約時間の重複やリソースの定員は検証されません。
-- 予約の更新時には、開始・終了日時の前後関係や、指定した利用者・リソースの存在は検証されません。
-- 利用者またはリソースを削除すると、それを参照する予約は一覧・詳細取得の結合結果に現れなくなります。
-
-## ライセンス
-
-[MIT License](LICENSE)
+ライセンスはbackend/LICENSEを参照してください。

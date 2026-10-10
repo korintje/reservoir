@@ -1,0 +1,30 @@
+[Unit]
+Description=Reservoir laboratory reservation API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=reservoir
+Group=reservoir
+WorkingDirectory=/var/lib/reservoir
+Environment=RESERVOIR_CONFIG=/etc/reservoir/reservoir.toml
+Environment=RUST_LOG=info
+ExecStart=/opt/reservoir/current/reservoir
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/reservoir
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

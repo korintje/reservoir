@@ -1,0 +1,8 @@
+[Unit]
+Description=Reservoir consistent SQLite backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/reservoirctl backup
+UMask=0077
+Nice=10

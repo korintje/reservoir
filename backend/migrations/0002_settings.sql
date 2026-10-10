@@ -1,0 +1,11 @@
+ALTER TABLE reservations ADD COLUMN version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE resources ADD COLUMN slack_channel_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE resources ADD COLUMN slack_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE resources ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS reservation_settings (id INTEGER PRIMARY KEY CHECK(id=1), advance_days INTEGER NOT NULL CHECK(advance_days BETWEEN 1 AND 3650));
+INSERT OR IGNORE INTO reservation_settings VALUES (1,15);
+CREATE TABLE app_settings (id INTEGER PRIMARY KEY CHECK(id=1), lab_name TEXT NOT NULL DEFAULT '研究室', contact_text TEXT NOT NULL DEFAULT '', slot_minutes INTEGER NOT NULL DEFAULT 30 CHECK(slot_minutes IN (15,30,60)), notification_text TEXT NOT NULL DEFAULT '予約を短縮・取消した場合は、設備のSlackチャネルへ連絡してください。');
+INSERT INTO app_settings(id) VALUES(1);
+CREATE TABLE notification_events (id TEXT PRIMARY KEY, reservation_id INTEGER NOT NULL, resource_id INTEGER NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'manual', attempts INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX notification_status ON notification_events(status,created_at);
