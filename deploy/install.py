@@ -335,7 +335,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--plan", action="store_true", help="導入内容だけ表示し、OSを変更しない")
     parser.add_argument("--import-db", type=Path, help="旧DBのコピーを初回導入時に移行")
-    parser.add_argument("--auto-assume", action="store_true", help="バックアップ後、不正期間を反転し同時刻予約を削除する")
     args = parser.parse_args()
     if args.plan:
         print("Ubuntu確認 → 公開範囲・認証・HTTPS・バックアップ入力 → OS依存・時刻同期 → 専用ユーザーでビルド → DB移行 → Nginx/systemd → バックアップ・動作検査 → 任意の固定IP設定")
@@ -349,8 +348,6 @@ def main():
     if args.import_db and (DB.exists() or not args.import_db.is_file()):
         parser.error("--import-dbは初回導入時の既存DBコピーにのみ使用できます")
     config, passwords = wizard(previous)
-    assume = args.auto_assume or choice("不整合予約をAuto-assumeする（開始終了を反転・同時刻は削除）", ["yes", "no"], "no") == "yes"
-    print("予約のAuto-assume:", "ON" if assume else "OFF")
     print("\n設定概要:", json.dumps({k:v for k,v in config.items() if k not in ("admin_hash",)}, ensure_ascii=False, indent=2))
     if choice("この設定でインストールしますか", ["yes", "no"], "no") != "yes":
         return
@@ -390,11 +387,6 @@ def main():
             os.chown(DB, record.pw_uid, record.pw_gid)
             os.chmod(DB, 0o600)
         try:
-            if assume and DB.exists():
-                STAGE = "予約のAuto-assume"
-                from repair import auto_assume
-                result = auto_assume(DB, config["backup_dir"])
-                print("Auto-assume結果:", json.dumps(result, ensure_ascii=False))
             STAGE = "APIの起動と動作確認"
             install_units(config)
             run(["systemctl", "enable", "--now", "reservoir"])
@@ -430,4 +422,5 @@ if __name__ == "__main__":
         main()
     except (Exception, KeyboardInterrupt) as exc:
         print(f"\n停止した段階: {STAGE}\n{exc}\n既存DBを初期化せずに再実行できます。", file=sys.stderr)
+        print("DBの不整合が原因の場合: sudo bash repair-db.sh（修復後にinstall.shを再実行）", file=sys.stderr)
         sys.exit(1)

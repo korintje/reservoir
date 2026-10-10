@@ -88,14 +88,15 @@ test(`compact layout, many resources, selected member, and Slack confirmation be
   const at = (hours: number) => new Date(now + hours * 3600000).toISOString();
   let booking = { id:1,resource_id:1,resource_name:'Microscope',user_id:1,user_name:'Alex',start:at(2),end:at(4),description:'Please clean the lens.\nContact Alex before use.',created_at:at(-5),version:1 };
   let saves = 0;
+  const reservationQueries: string[] = [];
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     let body: unknown = [];
     if (path.endsWith('/settings')) body = {lab_name:'Lab',advance_days:15,slot_minutes:30,contact_text:'',notification_text:''};
-    else if (path.endsWith('/users')) body = [{id:1,user_name:'Alex',active:true,sort_order:0}];
+    else if (path.endsWith('/users')) body = [{id:1,user_name:'Alex',active:true,sort_order:0},{id:2,user_name:'Jamie',active:true,sort_order:1}];
     else if (path.endsWith('/resources')) body = Array.from({length:40},(_,i)=>({id:i+1,resource_name:i===0?'Microscope':`Resource ${i+1}`,active:true,capacity:1,sort_order:i,custom_field:'Shared equipment',slack_url:'',slack_channel_id:''}));
     else if (route.request().method() === 'PUT') { saves++; body = {id:1,message:'Booking updated',notification_required:true,notification_reason:'Notify Slack',slack_url:null}; }
-    else if (path.endsWith('/reservations')) body = [booking];
+    else if (path.endsWith('/reservations')) { reservationQueries.push(route.request().url()); body = [booking]; }
     await route.fulfill({json:body});
   });
   await page.setViewportSize({width:1440,height:1000});
@@ -110,6 +111,14 @@ test(`compact layout, many resources, selected member, and Slack confirmation be
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('combobox',{name:'Member',exact:true})).toHaveValue('1');
   await dialog.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByRole('combobox',{name:'Default booking member'}).selectOption('2');
+  await expect(page).toHaveURL(/user=2/);
+  await expect(page.locator('.fc-timegrid-event .event-message')).toContainText(['Contact Alex before use.']);
+  await page.getByRole('button',{name:'New booking'}).click();
+  await expect(dialog.getByRole('combobox',{name:'Member',exact:true})).toHaveValue('2');
+  await dialog.getByRole('button',{name:'Close',exact:true}).click();
+  expect(reservationQueries.length).toBeGreaterThan(0);
+  expect(reservationQueries.every(url => !new URL(url).searchParams.has('user_id'))).toBe(true);
   await page.getByRole('button',{name:'List',exact:true}).click();
   await page.locator('.fc-list-event').first().click();
   await dialog.getByLabel('Start time',{exact:true}).fill(dateInput(at(3)));

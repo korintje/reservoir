@@ -42,9 +42,9 @@ export default function ReservationPage() {
     return () => cancelAnimationFrame(frame);
   }, [calendarHeight, view, settings.data?.slot_minutes]);
   const reservations = useQuery({
-    queryKey: ['reservations', period, resourceId, userId],
+    queryKey: ['reservations', period, resourceId],
     queryFn: () => api<Reservation[]>('/reservations?' + new URLSearchParams({
-      ...period, ...(resourceId ? { resource_id: String(resourceId) } : {}), ...(userId ? { user_id: String(userId) } : {}),
+      ...period, ...(resourceId ? { resource_id: String(resourceId) } : {}),
     })), enabled: Boolean(period.from), refetchInterval: 60000,
   });
   const activeResources = resources.data?.filter(r => r.active) || [];
@@ -68,7 +68,7 @@ export default function ReservationPage() {
         <button className={'resource-button ' + (!resourceId ? 'selected' : '')} onClick={() => choose('resource', '0')}><span className="resource-dot all"/><span>All resources</span></button>
         <div className="resource-list" aria-label="Resources">{activeResources.filter(r => (r.resource_name+' '+r.custom_field).toLowerCase().includes(resourceSearch.toLowerCase())).map(r => { const i = activeResources.findIndex(item => item.id === r.id); return <button className={'resource-button ' + (resourceId === r.id ? 'selected' : '')} key={r.id} onClick={() => choose('resource', String(r.id))}><span className="resource-dot" style={{ background: colors[i % colors.length] }}/><span>{r.resource_name}<small>{r.custom_field || 'Lab resource'}</small></span>{resourceId === r.id && <span className="selection-mark"/>}</button>; })}</div></div>
         {!resources.isPending && !activeResources.length && <p className="muted">No resources yet. Add resources in Settings.</p>}
-        <label className="filter-label">Filter by member<select value={userId} onChange={e => choose('user', e.target.value)}><option value={0}>All members</option>{members.data?.map(m => <option key={m.id} value={m.id}>{m.user_name}{!m.active ? ' (inactive)' : ''}</option>)}</select></label>
+        <label className="filter-label">Default booking member<select value={userId} onChange={e => choose('user', e.target.value)}><option value={0}>Select a member</option>{members.data?.map(m => <option key={m.id} value={m.id} disabled={!m.active}>{m.user_name}{!m.active ? ' (inactive)' : ''}</option>)}</select></label>
         <div className="rules"><Clock3 size={18}/><strong>Booking rules</strong><p>Book up to {settings.data?.advance_days || 15} days ahead. No overlapping bookings for the same resource.</p><p>Completed bookings cannot be edited. Notify Slack for short-notice changes.</p></div>
         {settings.data?.contact_text && <p className="contact-text">{settings.data.contact_text}</p>}
       </aside>
