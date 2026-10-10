@@ -77,8 +77,14 @@ test('administrator setup, booking, failure display, password edit and cancellat
   expect(errors).toEqual([]);
 });
 
-test('compact layout, many resources, selected member, and Slack confirmation before saving', async ({ page }) => {
-  const now = Date.now();
+for (const [scenario, fixedTime] of [
+  ['daytime', '2026-10-10T00:00:00Z'],
+  ['across midnight', '2026-10-10T12:00:00Z'],
+  ['across the week boundary', '2026-10-11T12:00:00Z'],
+] as const) {
+test(`compact layout, many resources, selected member, and Slack confirmation before saving (${scenario})`, async ({ page }) => {
+  await page.clock.setFixedTime(new Date(fixedTime));
+  const now = Date.parse(fixedTime);
   const at = (hours: number) => new Date(now + hours * 3600000).toISOString();
   let booking = { id:1,resource_id:1,resource_name:'Microscope',user_id:1,user_name:'Alex',start:at(2),end:at(4),description:'Please clean the lens.\nContact Alex before use.',created_at:at(-5),version:1 };
   let saves = 0;
@@ -98,7 +104,8 @@ test('compact layout, many resources, selected member, and Slack confirmation be
   expect(await page.locator('.resource-list').evaluate(el=>el.scrollHeight > el.clientHeight && el.clientHeight <= 360)).toBe(true);
   expect((await page.getByRole('button',{name:'New booking'}).boundingBox())!.y).toBeLessThan(100);
   await expect(page.locator('.brand,.page-heading,footer')).toHaveCount(0);
-  await expect(page.locator('.fc-timegrid-event .event-message')).toContainText('Contact Alex before use.');
+  // An overnight booking has a separate calendar segment for each day.
+  await expect(page.locator('.fc-timegrid-event .event-message')).toContainText(['Contact Alex before use.']);
   await page.getByRole('button',{name:'New booking'}).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('combobox',{name:'Member',exact:true})).toHaveValue('1');
@@ -130,3 +137,4 @@ test('compact layout, many resources, selected member, and Slack confirmation be
   await expect(dialog).not.toBeVisible();
   expect(saves).toBe(2);
 });
+}
