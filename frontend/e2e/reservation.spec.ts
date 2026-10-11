@@ -1,6 +1,32 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { dateInput } from '../src/date';
+
+test('hourly slots have uniform heights at full HD and after resizing', async ({ page }) => {
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    await route.fulfill({json:path.endsWith('/settings') ? {lab_name:'Lab',advance_days:15,slot_minutes:60,contact_text:'',notification_text:''} : []});
+  });
+  await page.setViewportSize({width:1920,height:1080});
+  await page.goto('/');
+  const rows = page.locator('.fc-timegrid-slots tr');
+  await expect(rows).toHaveCount(24);
+  for (const view of ['Week','Day']) {
+    await page.getByRole('button',{name:view,exact:true}).click();
+    for (const height of [1080,900,1080]) {
+      await page.setViewportSize({width:1920,height});
+      await expect.poll(async () => {
+        const heights = await rows.evaluateAll(elements => elements.map(el => el.getBoundingClientRect().height));
+        return Math.max(...heights)-Math.min(...heights);
+      }).toBeLessThan(2);
+      await expect.poll(async () => {
+        const slots = await page.locator('.fc-timegrid-slots').boundingBox();
+        const column = await page.locator('.fc-timegrid-col-frame').first().boundingBox();
+        return Math.abs((slots?.height || 0)-(column?.height || 0));
+      }).toBeLessThan(2);
+    }
+  }
+});
 test('administrator setup, booking, failure display, password edit and cancellation', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
