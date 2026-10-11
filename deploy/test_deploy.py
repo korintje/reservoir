@@ -14,6 +14,15 @@ CONFIG = {
     "lab_name":"研究室","admin_hash":"$argon2id$test",
 }
 class DeploymentTests(unittest.TestCase):
+    def test_ip_rejection_optional_and_domain_required(self):
+        c=copy.deepcopy(CONFIG)
+        self.assertNotIn('return 444;',nginx(c))
+        c['reject_ip_access']=True
+        self.assertEqual(nginx(c).count('return 444;'),2)
+        self.assertEqual(nginx(c,True).count('return 444;'),1)
+        self.assertNotIn('default_server',nginx(c))
+        c['hostname']='192.168.200.24'
+        with self.assertRaises(ValueError):validate(c)
     def test_modes_and_basic_switch(self):
         for mode in ("lan","internet"):
             for basic in (True,False):
@@ -23,7 +32,7 @@ class DeploymentTests(unittest.TestCase):
                     c.update(hostname="reservoir.example.org",tls="existing")
                 text=nginx(c)
                 self.assertIn("listen [::]:443 ssl",text)
-                self.assertIn("proxy_pass http://127.0.0.1:8080;",text)
+                self.assertIn("proxy_pass http://127.0.0.1:8080/api/;",text)
                 self.assertEqual("deny all;" in text,mode=="lan")
                 self.assertEqual('auth_basic "Reservoir";' in text,basic)
                 self.assertIn("auth_basic off;",text if not basic else nginx(c,True))
@@ -32,6 +41,20 @@ class DeploymentTests(unittest.TestCase):
         for key,value in (("hostname","example.org; return 200;"),("lan_networks",["all; allow all"]),("certificate","/x;include /etc/passwd"),("backup_time","99:99"),("backup_dir","/")):
             c=copy.deepcopy(CONFIG);c[key]=value
             with self.assertRaises(ValueError): validate(c)
+    def test_subpath_routes_assets_api_cookies_and_redirect(self):
+        for base in ('/reservation/','/lab/reservation/'):
+            c=copy.deepcopy(CONFIG);c['base_path']=base
+            text=nginx(c)
+            self.assertIn(f'location = {base.rstrip("/")} {{ return 308 {base}$is_args$args; }}',text)
+            self.assertIn(f'location {base}api/',text)
+            self.assertIn(f'proxy_cookie_path /api {base}api;',text)
+            self.assertIn(f'location {base}assets/',text)
+            self.assertIn(f'try_files $uri $uri/ {base}index.html;',text)
+            self.assertIn('location / { return 404; }',text)
+    def test_invalid_public_paths_rejected(self):
+        for base in ('reservation/','//','/../','/x y/','/a;return/','/a?b/','/reservation'):
+            c=copy.deepcopy(CONFIG);c['base_path']=base
+            with self.assertRaises(ValueError):validate(c)
     def test_public_self_signed_rejected(self):
         c=copy.deepcopy(CONFIG);c.update(mode="internet",hostname="example.org")
         with self.assertRaises(ValueError):validate(c)

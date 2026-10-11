@@ -4,6 +4,6 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:5173', browserName: 'chromium', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   webServer: [
     { command: 'python ../scripts/test-server.py', url: 'http://127.0.0.1:8080/api/health', timeout: 30000, reuseExistingServer: false },
-    { command: 'npm run dev -- --port 5173 --strictPort', url: 'http://127.0.0.1:5173', timeout: 30000, reuseExistingServer: false },
+    { command: 'npm run dev -- --port 5173 --strictPort', url: 'http://127.0.0.1:5173' + (process.env.RESERVOIR_BASE_PATH || '/'), timeout: 30000, reuseExistingServer: false },
   ],
 });

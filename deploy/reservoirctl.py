@@ -74,7 +74,7 @@ def restore(config, source):
 
 def configure(config):
     from install import wizard, credentials, setup_tls, firewall, install_units, verify
-    new, passwords = wizard(config)
+    new, passwords = wizard(config, allow_path_change=False)
     print("新しい公開範囲:",new["mode"],"Basic認証:","ON" if new["basic_auth"] else "OFF")
     if input("設定を反映しますか [yes/no]: ").strip() != "yes":
         return
@@ -113,7 +113,7 @@ def configure(config):
         run(["systemctl","daemon-reload"])
         run(["systemctl","restart","reservoir","reservoir-backup.timer"])
         raise
-    print("設定を反映しました:", "https://"+new["hostname"])
+    print("設定を反映しました:", "https://"+new["hostname"]+new.get("base_path", "/"))
 
 def main():
     parser=argparse.ArgumentParser(description="Reservoir運用コマンド")
@@ -135,6 +135,8 @@ def main():
         status=Path("/var/lib/reservoir/backup-status.json")
         print("最新バックアップ:",status.read_text() if status.exists() else "未実行")
         print("公開範囲:",config["mode"],"Basic認証:",config["basic_auth"])
+        print("アクセスURL:","https://"+config["hostname"]+config.get("base_path", "/"))
+        print("IP直打ち拒否:","ON" if config.get("reject_ip_access",False) else "OFF")
 
 if __name__=="__main__":
     try:

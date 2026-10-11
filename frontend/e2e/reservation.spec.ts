@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { dateInput } from '../src/date';
+const appBase = process.env.RESERVOIR_BASE_PATH || '/';
 
 test('hourly slots have uniform heights at full HD and after resizing', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
@@ -9,7 +10,7 @@ test('hourly slots have uniform heights at full HD and after resizing', async ({
     await route.fulfill({json:path.endsWith('/settings') ? {lab_name:'Lab',advance_days:15,slot_minutes:60,contact_text:'',notification_text:''} : []});
   });
   await page.setViewportSize({width:1920,height:1080});
-  await page.goto('/');
+  await page.goto(appBase);
   const rows = page.locator('.fc-timegrid-slots tr');
   await expect(rows).toHaveCount(24);
   await expect(page.locator('.calendar-nav h2')).toHaveText('2026/10/05 (Mon) – 2026/10/11 (Sun)');
@@ -36,7 +37,7 @@ test('hourly slots have uniform heights at full HD and after resizing', async ({
 test('administrator setup, booking, failure display, password edit and cancellation', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/settings');
+  await page.goto(appBase + 'settings');
   await page.getByLabel('Administrator password', { exact: true }).fill('e2e-admin-password');
   await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
@@ -52,7 +53,7 @@ test('administrator setup, booking, failure display, password edit and cancellat
   await page.getByLabel('Slack channel link', { exact: false }).fill('https://example.org/slack');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText('Microscope', { exact: true })).toBeVisible();
-  await page.goto('/?user=1');
+  await page.goto(appBase + '?user=1');
   await page.getByRole('button', { name: 'New booking', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('combobox', { name: 'Member', exact: true })).toHaveValue('1');
@@ -98,12 +99,19 @@ test('administrator setup, booking, failure display, password edit and cancellat
   await expect(page.getByText('Booking cancelled', { exact: true })).toBeVisible();
   await expect(page.locator('.fc-list-event')).toHaveCount(0);
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(appBase + 'settings$'));
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByLabel('Lab name', { exact: true }).fill('柳田研究室');
   await page.getByLabel('Booking horizon (days)', { exact: true }).fill('30');
   await page.getByRole('button', { name: 'Save settings', exact: true }).click();
   await expect(page.getByText('Settings saved.', { exact: false })).toBeVisible();
   await page.screenshot({ path: '../.test/screens/settings-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Maintenance', exact:true }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name:'Download backup', exact:true }).click();
+  expect((await download).suggestedFilename()).toMatch(/^reservoir-.*\.db$/);
   await page.getByRole('button', { name: 'Log out' }).click();
   await expect(page.getByRole('button', { name: 'Log in', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
@@ -132,7 +140,7 @@ test(`compact layout, many resources, selected member, and Slack confirmation be
     await route.fulfill({json:body});
   });
   await page.setViewportSize({width:1440,height:1000});
-  await page.goto('/?user=1&resource=1');
+  await page.goto(appBase + '?user=1&resource=1');
   await expect(page.locator('.resource-list button')).toHaveCount(40);
   expect(await page.locator('.resource-list').evaluate(el=>el.scrollHeight > el.clientHeight && el.clientHeight <= 360)).toBe(true);
   expect((await page.getByRole('button',{name:'New booking'}).boundingBox())!.y).toBeLessThan(100);

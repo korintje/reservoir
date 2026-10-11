@@ -31,9 +31,19 @@ def atomic_write(path: Path, content: str, mode=0o600):
             os.unlink(name)
 
 def validate(config):
+    base = config.get("base_path", "/")
+    if base != "/" and not re.fullmatch(r"/(?:[A-Za-z0-9_-]+/)+", base):
+        raise ValueError("公開パスは / または /reservation/ の形式で指定してください")
     if config["mode"] not in ("lan", "internet"):
         raise ValueError("公開モードが不正です")
     host = config["hostname"]
+    if config.get("reject_ip_access", False):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            pass
+        else:
+            raise ValueError("IP直打ちを拒否する場合はアクセス先にホスト名を指定してください")
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}", host) or ".." in host:
         raise ValueError("ホスト名またはIPv4アドレスを入力してください")
     if config["mode"] == "internet" and ("." not in host or host.endswith(".local")):
@@ -67,6 +77,9 @@ def validate(config):
 def nginx(config, bootstrap=False):
     validate(config)
     host = config["hostname"]
+    base = config.get("base_path", "/")
+    redirect = f'location = {base.rstrip("/")} {{ return 308 {base}$is_args$args; }}' if base != "/" else ""
+    outside = 'location / { return 404; }' if base != "/" else ""
     auth = 'auth_basic "Reservoir";\n    auth_basic_user_file /etc/reservoir/basic.htpasswd;' if config["basic_auth"] else "auth_basic off;"
     acl = ""
     if config["mode"] == "lan":
@@ -78,6 +91,20 @@ def nginx(config, bootstrap=False):
         root /var/lib/reservoir-acme;
     }"""
     public_acl = acl if config["mode"] == "lan" else ""
+    # Numeric Host names are caught even when Ubuntu's default site remains enabled.
+    # Do not claim default_server: other hosted applications may already own it.
+    ip_names = '"~^[0-9.]+$" "~^\\[?[0-9A-Fa-f]*:[0-9A-Fa-f:.]*\\]?$"'
+    deny_http = f"server {{ listen 80; listen [::]:80; server_name {ip_names}; return 444; }}\n" if config.get("reject_ip_access", False) else ""
+    deny_https = f"""server {{
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name {ip_names};
+    ssl_certificate {config["certificate"]};
+    ssl_certificate_key {config["certificate_key"]};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 444;
+}}
+""" if config.get("reject_ip_access", False) else ""
     http = f"""server {{
     listen 80;
     listen [::]:80;
@@ -88,8 +115,8 @@ def nginx(config, bootstrap=False):
 }}
 """
     if bootstrap:
-        return http
-    return http + f"""server {{
+        return deny_http + http
+    return deny_http + deny_https + http + f"""server {{
     listen 443 ssl;
     listen [::]:443 ssl;
     server_name {host};
@@ -105,26 +132,30 @@ def nginx(config, bootstrap=False):
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy same-origin always;
     add_header X-Frame-Options DENY always;
-    location = /api/admin/login {{
+    {redirect}
+    {outside}
+    location = {base}api/admin/login {{
         limit_req zone=reservoir_login burst=5 nodelay;
         limit_req_status 429;
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8080/api/admin/login;
+        proxy_cookie_path /api {base}api;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $remote_addr;
     }}
-    location /api/ {{
+    location {base}api/ {{
         limit_req zone=reservoir_api burst=30 nodelay;
         limit_req_status 429;
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8080/api/;
+        proxy_cookie_path /api {base}api;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_read_timeout 120s;
         add_header Cache-Control no-store always;
     }}
-    location /assets/ {{ try_files $uri =404; expires 1y; }}
-    location / {{ try_files $uri $uri/ /index.html; add_header Cache-Control no-cache always; }}
+    location {base}assets/ {{ try_files $uri =404; expires 1y; }}
+    location {base} {{ try_files $uri $uri/ {base}index.html; add_header Cache-Control no-cache always; }}
 }}
 """
 

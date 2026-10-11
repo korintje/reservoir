@@ -97,10 +97,15 @@ def deployment_rollback(previous):
             subprocess.run(["systemctl", "reload", "nginx"], check=False)
         raise
 
-def wizard(existing=None):
+def wizard(existing=None, allow_path_change=True):
     old = existing or {}
     mode = choice("公開範囲", ["lan", "internet"], old.get("mode", "lan"))
     host = prompt("アクセス用ホスト名またはIPv4アドレス", old.get("hostname", detected_address() if mode == "lan" else ""))
+    base = old.get("base_path", "/" if existing else "/reservation/")
+    if allow_path_change:
+        base = prompt("公開パス（/ または /reservation/、変更時は再ビルド）", base)
+        if base and not base.endswith("/"):
+            base += "/"
     default_network = old.get("lan_networks", ["192.168.1.0/24"])
     networks = prompt("LAN許可ネットワーク（カンマ区切り、実際のLANに合わせて変更）", ",".join(default_network))
     tls_options = ["selfsigned", "existing"] if mode == "lan" else ["existing", "acme"]
@@ -111,7 +116,8 @@ def wizard(existing=None):
         tls_default = tls_options[0]
     tls = choice("HTTPS方式", tls_options, tls_default)
     config = {
-        "mode": mode, "hostname": host,
+        "mode": mode, "hostname": host, "base_path": base,
+        "reject_ip_access": choice("IPアドレス直打ちを拒否する（ホスト名でアクセス・return 444）", ["on", "off"], "on" if old.get("reject_ip_access", False) else "off") == "on",
         "lan_networks": [str(ipaddress.ip_network(n.strip(), strict=False)) for n in networks.split(",") if n.strip()],
         "tls": tls, "basic_auth": choice("共通Basic認証", ["on", "off"], "on" if old.get("basic_auth", True) else "off") == "on",
         "ssh_port": int(prompt("現在のSSHポート（通信を維持するため許可）", old.get("ssh_port", 22))),
@@ -177,7 +183,7 @@ def download(url, target):
     with urllib.request.urlopen(url, timeout=90) as response, open(target, "wb") as output:
         shutil.copyfileobj(response, output)
 
-def build_release():
+def build_release(config):
     home = Path("/var/cache/reservoir-build")
     create_user("reservoir-build", home)
     record = pwd.getpwnam("reservoir-build")
@@ -220,11 +226,11 @@ def build_release():
         (home / f"node-{version}-linux-{arch}").rename(home / "node")
     builder(["cargo", "+1.98.1", "build", "--release", "--locked", "-j", "1"], home, cwd=work / "backend")
     builder(["npm", "ci"], home, cwd=work / "frontend")
-    builder(["npm", "run", "build"], home, cwd=work / "frontend")
+    builder(["npm", "run", "build", "--", "--base", config.get("base_path", "/")], home, cwd=work / "frontend")
     release = ROOT / "releases" / time.strftime("%Y%m%d-%H%M%S")
     release.mkdir(parents=True)
     shutil.copy2(work / "backend/target/release/reservoir", release / "reservoir")
-    shutil.copytree(work / "frontend/dist", release / "frontend")
+    shutil.copytree(work / "frontend/dist", release / "frontend" / config.get("base_path", "/").strip("/"))
     for directory, dirs, files in os.walk(release):
         os.chmod(directory, 0o755)
         for file in files:
@@ -361,7 +367,7 @@ def main():
         create_user("reservoir", "/var/lib/reservoir")
         ETC.mkdir(mode=0o755, exist_ok=True)
         STAGE = "専用ユーザーによるビルド"
-        release = build_release()
+        release = build_release(config)
         credentials(config, passwords, release / "reservoir")
         STAGE = "HTTPSと公開範囲"
         firewall(config, previous)
@@ -408,7 +414,7 @@ def main():
                 (ROOT / "current").symlink_to(old_release)
                 run(["systemctl", "start", "reservoir"])
             raise
-    print("\n導入完了: https://" + config["hostname"])
+    print("\n導入完了: https://" + config["hostname"] + config.get("base_path", "/"))
     print("定期バックアップと復元: sudo reservoirctl status / backup / restore")
     print("LAN・Basic認証の切替: sudo reservoirctl configure")
     print("インターネット公開時はDNS・ルーター・大学のネットワーク側でも到達性を確認してください。")

@@ -31,7 +31,13 @@ sudo bash install.sh              # 対話式に導入
 4. 必要パッケージ、RustとNode.js、専用ユーザーによるビルド、Nginx、systemd。
 5. 毎日のバックアップと保持期間、動作確認、任意の固定IP設定。
 
-アプリは専用ユーザーで127.0.0.1:8080に待ち受けます。NginxがHTTPSと静的画面を提供し、/apiをそのまま転送します。WebプロセスにはOS管理権限を与えません。インストーラーは自分が付けたUFWのWeb許可ルールを更新し、他のアプリのルールは削除しません。
+アプリは専用ユーザーで127.0.0.1:8080に待ち受けます。NginxがHTTPSと静的画面を提供します。公開パスが`/reservation/`の場合、画面は`https://ホスト名/reservation/`、APIは`/reservation/api/`、設定画面は`/reservation/settings`です。NginxはAPIをバックエンド内部の`/api/`へ転送し、管理者Cookieのパスも書き換えます。WebプロセスにはOS管理権限を与えません。インストーラーは自分が付けたUFWのWeb許可ルールを更新し、他のアプリのルールは削除しません。
+
+ウィザードの「公開パス」で`/reservation/`などを指定できます。新規導入の既定は`/reservation/`、従来の配置を更新する場合は`/`を維持します。LAN・internetどちらでも利用でき、末尾の`/`は自動補完します。`/reservation?user=1`はクエリを維持して`/reservation/?user=1`へ転送されます。ビルド成果物は`/opt/reservoir/current/frontend/reservation/`へ配置します。`/lab/reservation/`など複数階層も利用できます。公開パスの変更には`sudo bash install.sh`を再実行してください。再ビルドが必要なため、`reservoirctl configure`は公開パスを維持します。
+
+「IPアドレス直打ちを拒否する」をONにすると、IPv4・IPv6のIPをHostとして受けたHTTP/HTTPSリクエストをNginxの`return 444`で切断します。既定はOFFで、ON時はアクセス先にIPではなくホスト名を指定する必要があります。導入後も`sudo reservoirctl configure`で変更できます。HTTPSではTLS接続後に切断するため、IPでのアクセスでは先に証明書警告が出る場合があります。接続先IPを隠す機能ではなく、ホスト名を明示した通信は許可します。他のサイトに明示的なIP用`server_name`がある場合、そのサイトの設定が優先されます。
+
+フロントエンドだけ更新する場合も、保存済み公開パスに合わせてビルドし、同じディレクトリに配置してください（例: `npm run build -- --base /reservation/`）。`dist/`の中身を`frontend/reservation/`へ配置し、`dist/`そのものを下に入れないでください。
 
 LANでは現在のIPが入力候補になります。独自のホスト名を使う場合は研究室DNS等で名前解決を設定してください。自己署名証明書では利用端末への信頼設定が必要です。証明書の期限は825日です。
 

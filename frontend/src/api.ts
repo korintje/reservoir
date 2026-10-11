@@ -1,8 +1,9 @@
 let csrfToken = '';
+export const apiBase = import.meta.env.BASE_URL + 'api';
 export function setCsrfToken(value: string) { csrfToken = value; }
 export class ApiError extends Error { constructor(message: string, public status: number) { super(message); } }
 export async function api<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
-  const response = await fetch('/api' + path, {
+  const response = await fetch(apiBase + path, {
     method, credentials: 'same-origin',
     headers: { 'X-Reservoir-Request': '1', ...(data === undefined ? {} : { 'Content-Type': 'application/json' }), ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) },
     body: data === undefined ? undefined : JSON.stringify(data),

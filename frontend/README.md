@@ -10,7 +10,9 @@ npm run build
 npm run e2e
 ```
 
-APIは相対/apiを使い、Viteが127.0.0.1:8080へ転送します。単独の開発サーバーを公開用サーバーとして使用せず、本番ではdist/をNginxから配信します。管理者Cookieは本番でHTTPSを必要とします。
+画面・API・管理者CookieはViteの公開パスに揃えます。例えば`npm run build -- --base /reservation/`なら、画面は`/reservation/`、APIは`/reservation/api/`です。React Routerも同じベースパスを使います。本番では`dist/`の内容をNginxのドキュメントルート下の`reservation/`に配置し、APIをバックエンド内部の`/api/`へ転送します。管理者Cookieは本番でHTTPSを必要とします。
+
+開発時の既定パスは`/`です。`RESERVOIR_BASE_PATH=/reservation/ npm run dev`で公開パス配下の開発・`RESERVOIR_BASE_PATH=/reservation/ npm run e2e`でブラウザテストができます（PowerShellでは事前に`$env:RESERVOIR_BASE_PATH='/reservation/'`を設定）。ViteもAPI転送とCookieのパス変換を行います。
 
 データ取得はTanStack Query、表示はFullCalendar、時刻はLuxonで日本時間へ統一します。月・週・日・一覧表示と設備の絞り込みを提供し、スマートフォンでは一覧を初期表示します。メンバー選択はURLの`user`クエリを切り替え、新規予約の初期メンバーにのみ使用します。
 

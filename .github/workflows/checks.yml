@@ -29,14 +29,17 @@ jobs:
           npm ci
           npm test
           npm run build
+          npm run build -- --base /reservation/
           npm audit --audit-level=low
           npx playwright install --with-deps chromium
           npm run e2e
+          RESERVOIR_BASE_PATH=/reservation/ npm run e2e
       - name: Deployment checks
         run: |
           sudo apt-get update
           sudo apt-get install -y nginx
           bash -n install.sh
+          bash -n repair-db.sh
           python3 -m compileall -q deploy scripts
           cd deploy
           python3 -m unittest discover -v
