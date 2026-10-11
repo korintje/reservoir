@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { dateInput } from '../src/date';
 
 test('hourly slots have uniform heights at full HD and after resizing', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-11T00:00:00+09:00'));
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     await route.fulfill({json:path.endsWith('/settings') ? {lab_name:'Lab',advance_days:15,slot_minutes:60,contact_text:'',notification_text:''} : []});
@@ -11,6 +12,8 @@ test('hourly slots have uniform heights at full HD and after resizing', async ({
   await page.goto('/');
   const rows = page.locator('.fc-timegrid-slots tr');
   await expect(rows).toHaveCount(24);
+  await expect(page.locator('.calendar-nav h2')).toHaveText('2026/10/05 (Mon) – 2026/10/11 (Sun)');
+  await expect(page.locator('.fc-col-header-cell-cushion').first()).toHaveText('10/05 (Mon)');
   for (const view of ['Week','Day']) {
     await page.getByRole('button',{name:view,exact:true}).click();
     for (const height of [1080,900,1080]) {
@@ -26,6 +29,9 @@ test('hourly slots have uniform heights at full HD and after resizing', async ({
       }).toBeLessThan(2);
     }
   }
+  await page.getByRole('button',{name:'Month',exact:true}).click();
+  await expect(page.locator('.calendar-nav h2')).toHaveText('2026/10');
+  await expect(page.locator('.fc-col-header-cell-cushion').first()).toHaveText('Mon');
 });
 test('administrator setup, booking, failure display, password edit and cancellation', async ({ page }) => {
   const errors: string[] = [];

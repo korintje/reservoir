@@ -10,7 +10,7 @@ import luxonPlugin from '@fullcalendar/luxon3';
 import { Plus, ArrowUpRight, X, RefreshCw, Clock3, CalendarDays, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from './api';
 import { slackWarning } from './notification';
-import { dateInput, toApiDate, displayDate, status } from './date';
+import { dateInput, toApiDate, displayDate, status, calendarDate, calendarTitle, calendarListDate, weekday } from './date';
 import type { Member, Resource, Reservation, Settings, Result } from './types';
 
 type Editor = { reservation: Reservation | null; resource: number; member: number; start: string; end: string };
@@ -76,7 +76,9 @@ export default function ReservationPage() {
         {reservations.error && <div className="notice error" role="alert">{reservations.error.message}<button onClick={() => void reservations.refetch()}>Retry</button></div>}
         {reservations.isFetching && <p className="loading-text" role="status">Loading bookings…</p>}
         <FullCalendar ref={calendar} plugins={[dayGridPlugin,timeGridPlugin,interactionPlugin,listPlugin,luxonPlugin]} locale="en-gb" timeZone="Asia/Tokyo" initialView={view} headerToolbar={false} height={view === 'listWeek' ? 'auto' : calendarHeight} firstDay={1} expandRows allDaySlot={false} nowIndicator eventMinHeight={68} editable={false} selectable={Boolean(activeResources.length && members.data?.some(m => m.active))} selectLongPressDelay={250} slotMinTime="00:00:00" slotMaxTime="24:00:00" scrollTime="08:00:00" slotDuration={settings.data?.slot_minutes === 60 ? '01:00:00' : '00:' + String(settings.data?.slot_minutes || 30).padStart(2,'0') + ':00'} slotLabelInterval="01:00:00" eventTimeFormat={{ hour:'2-digit',minute:'2-digit',hour12:false }} slotLabelFormat={{ hour:'2-digit',minute:'2-digit',hour12:false }}
-          datesSet={info => { setTitle(info.view.title); setPeriod({ from:info.start.toISOString(), until:info.end.toISOString() }); }}
+          dayHeaderContent={info => info.view.type === 'dayGridMonth' ? weekday(info.date) : calendarDate(info.date,false)}
+          listDayFormat={info => calendarListDate(info.date)} listDaySideFormat={false}
+          datesSet={info => { setTitle(calendarTitle(info.view.currentStart,info.view.currentEnd,info.view.type)); setPeriod({ from:info.start.toISOString(), until:info.end.toISOString() }); }}
           select={info => { create(info.startStr, info.endStr); calendar.current?.getApi().unselect(); }}
           events={(reservations.data || []).map(r => ({ id:String(r.id), title:r.user_name + (resourceId ? '' : ' · ' + r.resource_name), start:r.start, end:r.end, backgroundColor:colors[Math.max(0, activeResources.findIndex(s => s.id === r.resource_id)) % colors.length], borderColor:'transparent', extendedProps:{ state:status(r.start,r.end), description:r.description } }))}
           eventClick={info => { const r = reservations.data?.find(item => item.id === Number(info.event.id)); if (r) setEditor({ reservation:r,resource:r.resource_id,member:r.user_id,start:dateInput(r.start),end:dateInput(r.end) }); }}
